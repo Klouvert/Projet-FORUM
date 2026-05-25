@@ -1,83 +1,73 @@
-// Types de base
-export type NodeStatus = 'bourgeon' | 'fleur' | 'fruit' | 'feuille';
-export type Domain = 'ecologie' | 'social' | 'economie' | 'culture';
+export type NodeStage = 'bud' | 'flower' | 'fruit' | 'leaf';
+export type Domain = 'ecology' | 'social' | 'economy' | 'culture';
 
-// Vote
-export interface Vote {
-  id: number;
-  userId: number;
-  score: number; // 1 à 10
-  createdAt: string;
-}
+export const LEVEL_TO_STAGE: Record<number, NodeStage> = {
+  0: 'bud',
+  1: 'flower',
+  2: 'fruit',
+  3: 'leaf',
+};
 
-export interface VoteStats {
-  average: number;
-  threshold60: number; // score atteint par 60% des votants
-  distribution: Record<number, number>; // { 1: 3, 2: 5, ... 10: 12 }
-  totalVotes: number;
-}
-
-// Argument
 export interface Argument {
-  id: number;
+  id: string;
   content: string;
-  type: 'pour' | 'contre';
-  votes: Vote[];
-  stats: VoteStats;
+  side: 'pour' | 'contre';
+  averageScore: number;
+  voteCount: number;
   createdAt: string;
+  authorName: string;
 }
 
-// Amendement
-export interface Amendement {
-  id: number;
-  content: string;
-  arguments: Argument[];
-  stats: VoteStats;
-  createdAt: string;
-}
-
-// Nœud principal
-export interface Noeud {
-  id: number;
+export interface Amendment {
+  id: string;
   title: string;
-  description: string;
-  status: NodeStatus;
+  content: string;
+  isMerged: boolean;
+  averageScore: number;
+  voteCount: number;
+  createdAt: string;
+  authorName: string;
+}
+
+export interface IdeaNode {
+  id: string;
+  title: string;
+  content: string;
+  level: number;
+  status: string;
   domain: Domain;
-  brancheId: number;
-  arguments: Argument[];
-  amendements: Amendement[];
-  stats: VoteStats;
+  averageScore: number;
+  voteCount: number;
   createdAt: string;
+  authorName: string;
+  branchId: string | null;
+}
+
+export interface IdeaDetail extends IdeaNode {
   updatedAt: string;
+  authorId: string;
+  arguments: Argument[];
+  amendments: Amendment[];
 }
 
-// Branche
-export interface Branche {
-  id: number;
+export interface Branch {
+  id: string;
   name: string;
-  noeuds: Noeud[];
-  userCount: number; // détermine l'épaisseur visuelle
+  description: string | null;
+  ideaCount: number;
+  createdAt: string;
 }
 
-// Racine (règle votable)
-export interface Racine {
-  id: number;
-  title: string;
+export interface TrunkValue {
+  id: string;
+  name: string;
   description: string;
-  rule: string;
-  stats: VoteStats;
+  averageScore: number;
+  voteCount: number;
 }
 
-// Valeur du tronc
-export interface ValeurTronc {
-  id: number;
-  name: string;
-  stats: VoteStats;
-}
-
-// Arbre complet
-export interface Arbre {
-  branches: Branche[];
-  racines: Racine[];
-  valeurs: ValeurTronc[];
+export interface Tree {
+  trunkValues: TrunkValue[];
+  branches: Branch[];
+  ideas: IdeaNode[];
 }

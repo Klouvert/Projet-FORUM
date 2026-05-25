@@ -1,12 +1,17 @@
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Home from './pages/Home';
+import Login from './pages/Login';
 import './App.css';
 
-const App = () => {
-  return (
-    <div className="app">
-      <Home />
-    </div>
-  );
+const AppContent = () => {
+  const { user } = useAuth();
+  return user ? <Home /> : <Login />;
 };
+
+const App = () => (
+  <AuthProvider>
+    <AppContent />
+  </AuthProvider>
+);
 
 export default App;

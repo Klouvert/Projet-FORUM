@@ -1,102 +1,121 @@
 import { useState } from 'react';
-import type { Noeud } from '../../types';
+import type { IdeaDetail } from '../../types';
 import VoteSlider from '../ui/VoteSlider';
 import ScoreChart from '../ui/ScoreChart';
+import { useAuth } from '../../context/AuthContext';
 
 interface BourGeonModalProps {
-  noeud: Noeud;
+  idea: IdeaDetail;
   onClose: () => void;
-  onVote: (noeudId: number, score: number) => void;
-  onAddArgument: (noeudId: number, content: string, type: 'pour' | 'contre') => void;
+  onVote: (ideaId: string, score: number) => void;
+  onAddArgument: (ideaId: string, content: string, side: 'pour' | 'contre') => Promise<void>;
+  onPromote: (ideaId: string) => Promise<void>;
 }
 
-const BourGeonModal = ({ noeud, onClose, onVote, onAddArgument }: BourGeonModalProps) => {
+const BourGeonModal = ({ idea, onClose, onVote, onAddArgument, onPromote }: BourGeonModalProps) => {
+  const { user } = useAuth();
+  const isAuthor = user?.userId === idea.authorId;
   const [newArgument, setNewArgument] = useState('');
-  const [argumentType, setArgumentType] = useState<'pour' | 'contre'>('pour');
+  const [argumentSide, setArgumentSide] = useState<'pour' | 'contre'>('pour');
+  const [argFeedback, setArgFeedback] = useState<'success' | 'error' | null>(null);
+  const [argLoading, setArgLoading] = useState(false);
 
-  const handleAddArgument = () => {
+  const handleAddArgument = async () => {
     if (!newArgument.trim()) return;
-    onAddArgument(noeud.id, newArgument.trim(), argumentType);
-    setNewArgument('');
+    setArgLoading(true);
+    try {
+      await onAddArgument(idea.id, newArgument.trim(), argumentSide);
+      setNewArgument('');
+      setArgFeedback('success');
+      setTimeout(() => setArgFeedback(null), 2500);
+    } catch {
+      setArgFeedback('error');
+      setTimeout(() => setArgFeedback(null), 2500);
+    } finally {
+      setArgLoading(false);
+    }
   };
 
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
 
-        {/* Header */}
         <div style={headerStyle}>
           <div>
             <span style={{ ...badgeStyle, background: '#9C27B0' }}>🌱 Bourgeon</span>
-            <h2 style={{ fontSize: '18px', marginTop: '8px' }}>{noeud.title}</h2>
+            <h2 style={{ fontSize: '18px', marginTop: '8px' }}>{idea.title}</h2>
           </div>
           <button onClick={onClose} style={closeBtnStyle}>✕</button>
         </div>
 
-        {/* Description */}
         <p style={{ color: '#aaa', fontSize: '14px', lineHeight: 1.6, marginBottom: '16px' }}>
-          {noeud.description}
+          {idea.content}
         </p>
 
-        {/* Stats */}
-        <ScoreChart stats={noeud.stats} />
+        <ScoreChart averageScore={idea.averageScore} voteCount={idea.voteCount} />
 
-        {/* Vote */}
         <div style={sectionStyle}>
           <h3 style={sectionTitleStyle}>Votre vote</h3>
-          <VoteSlider onVote={(score) => onVote(noeud.id, score)} />
+          <VoteSlider onVote={(score) => onVote(idea.id, score)} />
         </div>
 
-        {/* Arguments */}
+        {isAuthor && (
+          <div style={sectionStyle}>
+            <h3 style={sectionTitleStyle}>Progression</h3>
+            <button onClick={() => onPromote(idea.id)} style={promoteBtnStyle}>
+              Promouvoir en Fleur 🌸
+            </button>
+          </div>
+        )}
+
         <div style={sectionStyle}>
-          <h3 style={sectionTitleStyle}>Arguments ({noeud.arguments.length})</h3>
+          <h3 style={sectionTitleStyle}>Arguments ({idea.arguments.length})</h3>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {noeud.arguments.map((arg) => (
+            {idea.arguments.map((arg) => (
               <li key={arg.id} style={{
                 padding: '10px 12px',
-                background: arg.type === 'pour' ? 'rgba(76,175,80,0.1)' : 'rgba(229,57,53,0.1)',
-                borderLeft: `3px solid ${arg.type === 'pour' ? '#4CAF50' : '#e53935'}`,
+                background: arg.side === 'pour' ? 'rgba(76,175,80,0.1)' : 'rgba(229,57,53,0.1)',
+                borderLeft: `3px solid ${arg.side === 'pour' ? '#4CAF50' : '#e53935'}`,
                 borderRadius: '0 6px 6px 0',
                 fontSize: '13px',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: arg.type === 'pour' ? '#4CAF50' : '#e53935', fontSize: '11px', textTransform: 'uppercase' }}>
-                    {arg.type === 'pour' ? '👍 Pour' : '👎 Contre'}
+                  <span style={{ color: arg.side === 'pour' ? '#4CAF50' : '#e53935', fontSize: '11px', textTransform: 'uppercase' }}>
+                    {arg.side === 'pour' ? '👍 Pour' : '👎 Contre'}
                   </span>
                   <span style={{ color: '#888', fontSize: '11px' }}>
-                    {arg.stats.average.toFixed(1)}/10 · {arg.stats.totalVotes} votes
+                    {arg.averageScore.toFixed(1)}/10 · {arg.voteCount} votes
                   </span>
                 </div>
                 <p style={{ color: '#ddd', marginTop: '4px' }}>{arg.content}</p>
               </li>
             ))}
-            {noeud.arguments.length === 0 && (
+            {idea.arguments.length === 0 && (
               <p style={{ color: '#666', fontSize: '13px' }}>Aucun argument pour l'instant.</p>
             )}
           </ul>
         </div>
 
-        {/* Ajouter un argument */}
         <div style={sectionStyle}>
           <h3 style={sectionTitleStyle}>Ajouter un argument</h3>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-            {(['pour', 'contre'] as const).map((type) => (
+            {(['pour', 'contre'] as const).map((side) => (
               <button
-                key={type}
-                onClick={() => setArgumentType(type)}
+                key={side}
+                onClick={() => setArgumentSide(side)}
                 style={{
                   padding: '6px 16px',
                   borderRadius: '20px',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '13px',
-                  background: argumentType === type
-                    ? (type === 'pour' ? '#4CAF50' : '#e53935')
+                  background: argumentSide === side
+                    ? (side === 'pour' ? '#4CAF50' : '#e53935')
                     : '#333',
                   color: '#fff',
                 }}
               >
-                {type === 'pour' ? '👍 Pour' : '👎 Contre'}
+                {side === 'pour' ? '👍 Pour' : '👎 Contre'}
               </button>
             ))}
           </div>
@@ -116,18 +135,25 @@ const BourGeonModal = ({ noeud, onClose, onVote, onAddArgument }: BourGeonModalP
               resize: 'vertical',
             }}
           />
-          <button onClick={handleAddArgument} style={{
-            marginTop: '8px',
-            padding: '8px 20px',
-            background: '#0f3460',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '13px',
-          }}>
-            Publier l'argument
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+            <button onClick={handleAddArgument} disabled={argLoading} style={{
+              padding: '8px 20px',
+              background: '#0f3460',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: argLoading ? 'not-allowed' : 'pointer',
+              fontSize: '13px',
+            }}>
+              {argLoading ? 'Publication...' : "Publier l'argument"}
+            </button>
+            {argFeedback === 'success' && (
+              <span style={{ color: '#4CAF50', fontSize: '13px' }}>✓ Publié</span>
+            )}
+            {argFeedback === 'error' && (
+              <span style={{ color: '#e53935', fontSize: '13px' }}>Erreur</span>
+            )}
+          </div>
         </div>
 
       </div>
@@ -179,6 +205,16 @@ const sectionStyle: React.CSSProperties = {
   borderTop: '1px solid #0f3460',
   paddingTop: '16px',
   marginTop: '16px',
+};
+
+const promoteBtnStyle: React.CSSProperties = {
+  padding: '8px 20px',
+  background: '#2196F3',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  fontSize: '13px',
 };
 
 const sectionTitleStyle: React.CSSProperties = {

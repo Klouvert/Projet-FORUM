@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 interface VoteSliderProps {
-  onVote: (score: number) => void;
+  onVote: (score: number) => void | Promise<void>;
   currentScore?: number;
   disabled?: boolean;
 }
@@ -16,21 +16,29 @@ const SCORE_COLORS: Record<number, string> = {
 const VoteSlider = ({ onVote, currentScore, disabled = false }: VoteSliderProps) => {
   const [score, setScore] = useState<number>(currentScore ?? 5);
   const [voted, setVoted] = useState(false);
+  const [voteError, setVoteError] = useState(false);
+  const [voting, setVoting] = useState(false);
 
-  const handleVote = () => {
-    onVote(score);
-    setVoted(true);
+  const handleVote = async () => {
+    setVoting(true);
+    setVoteError(false);
+    try {
+      await onVote(score);
+      setVoted(true);
+    } catch {
+      setVoteError(true);
+    } finally {
+      setVoting(false);
+    }
   };
+
+  const busy = disabled || voted || voting;
 
   return (
     <div style={{ padding: '12px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
         <span style={{ fontSize: '12px', color: '#888' }}>Votre note</span>
-        <span style={{
-          fontSize: '18px',
-          fontWeight: 'bold',
-          color: SCORE_COLORS[score],
-        }}>
+        <span style={{ fontSize: '18px', fontWeight: 'bold', color: SCORE_COLORS[score] }}>
           {score}/10
         </span>
       </div>
@@ -41,16 +49,15 @@ const VoteSlider = ({ onVote, currentScore, disabled = false }: VoteSliderProps)
         max={10}
         step={1}
         value={score}
-        disabled={disabled || voted}
+        disabled={busy}
         onChange={(e) => setScore(Number(e.target.value))}
         style={{
           width: '100%',
           accentColor: SCORE_COLORS[score],
-          cursor: disabled || voted ? 'not-allowed' : 'pointer',
+          cursor: busy ? 'not-allowed' : 'pointer',
         }}
       />
 
-      {/* Graduations */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
         {Array.from({ length: 10 }, (_, i) => (
           <span key={i + 1} style={{ fontSize: '9px', color: '#555' }}>{i + 1}</span>
@@ -59,21 +66,21 @@ const VoteSlider = ({ onVote, currentScore, disabled = false }: VoteSliderProps)
 
       <button
         onClick={handleVote}
-        disabled={disabled || voted}
+        disabled={busy}
         style={{
           marginTop: '10px',
           width: '100%',
           padding: '8px',
-          background: voted ? '#333' : SCORE_COLORS[score],
+          background: voted ? '#2e7d32' : voteError ? '#c62828' : SCORE_COLORS[score],
           color: '#fff',
           border: 'none',
           borderRadius: '6px',
-          cursor: disabled || voted ? 'not-allowed' : 'pointer',
+          cursor: busy ? 'not-allowed' : 'pointer',
           fontSize: '13px',
           transition: 'background 0.2s',
         }}
       >
-        {voted ? '✓ Vote enregistré' : 'Voter'}
+        {voting ? 'Envoi...' : voted ? '✓ Vote enregistré' : voteError ? '✗ Erreur — réessayer' : 'Voter'}
       </button>
     </div>
   );

@@ -1,91 +1,85 @@
 import { useState } from 'react';
-import type { NodeStatus, Domain } from '../../types';
+import type { IdeaNode, Domain } from '../../types';
+import { LEVEL_TO_STAGE } from '../../types';
 
-interface Filters {
-  keyword: string;
-  status: NodeStatus | '';
-  domain: Domain | '';
-  period: 'week' | 'month' | 'custom' | '';
+type StageFilter = 'bud' | 'flower' | 'fruit' | 'leaf' | '';
+
+interface SearchPanelProps {
+  ideas: IdeaNode[];
 }
 
-const SearchPanel = () => {
-  const [filters, setFilters] = useState<Filters>({
-    keyword: '',
-    status: '',
-    domain: '',
-    period: '',
-  });
+const SearchPanel = ({ ideas }: SearchPanelProps) => {
+  const [keyword, setKeyword] = useState('');
+  const [stage, setStage] = useState<StageFilter>('');
+  const [domain, setDomain] = useState<Domain | ''>('');
 
-  const handleSearch = () => {
-    console.log('Filtres appliqués :', filters);
-    // TODO : connecter à l'API
-  };
+  const results = ideas.filter((idea) => {
+    const matchKeyword = !keyword || idea.title.toLowerCase().includes(keyword.toLowerCase());
+    const matchStage = !stage || LEVEL_TO_STAGE[idea.level] === stage;
+    const matchDomain = !domain || idea.domain === domain;
+    return matchKeyword && matchStage && matchDomain;
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-      {/* Mot-clé */}
       <div>
         <label style={labelStyle}>Mot-clé</label>
         <input
           type="text"
           placeholder="Rechercher..."
-          value={filters.keyword}
-          onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
           style={inputStyle}
         />
       </div>
 
-      {/* Statut */}
       <div>
-        <label style={labelStyle}>Statut</label>
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value as NodeStatus | '' })}
-          style={inputStyle}
-        >
+        <label style={labelStyle}>Stade</label>
+        <select value={stage} onChange={(e) => setStage(e.target.value as StageFilter)} style={inputStyle}>
           <option value="">Tous</option>
-          <option value="bourgeon">Bourgeon</option>
-          <option value="fleur">Fleur</option>
-          <option value="fruit">Fruit</option>
-          <option value="feuille">Feuille</option>
+          <option value="bud">🌱 Bourgeon</option>
+          <option value="flower">🌸 Fleur</option>
+          <option value="fruit">🍊 Fruit</option>
+          <option value="leaf">🍃 Feuille</option>
         </select>
       </div>
 
-      {/* Domaine */}
       <div>
         <label style={labelStyle}>Domaine</label>
-        <select
-          value={filters.domain}
-          onChange={(e) => setFilters({ ...filters, domain: e.target.value as Domain | '' })}
-          style={inputStyle}
-        >
+        <select value={domain} onChange={(e) => setDomain(e.target.value as Domain | '')} style={inputStyle}>
           <option value="">Tous</option>
-          <option value="ecologie">Écologie</option>
-          <option value="social">Social</option>
-          <option value="economie">Économie</option>
-          <option value="culture">Culture</option>
+          <option value="ecology">🌿 Écologie</option>
+          <option value="social">🤝 Social</option>
+          <option value="economy">💶 Économie</option>
+          <option value="culture">🎭 Culture</option>
         </select>
       </div>
 
-      {/* Période */}
-      <div>
-        <label style={labelStyle}>Période</label>
-        <select
-          value={filters.period}
-          onChange={(e) => setFilters({ ...filters, period: e.target.value as Filters['period'] })}
-          style={inputStyle}
-        >
-          <option value="">Toutes</option>
-          <option value="week">Dernière semaine</option>
-          <option value="month">Dernier mois</option>
-        </select>
+      <div style={{ marginTop: '4px' }}>
+        <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>
+          {results.length} résultat{results.length !== 1 ? 's' : ''}
+        </p>
+        <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {results.map((idea) => (
+            <li key={idea.id} style={{
+              padding: '8px 10px',
+              background: '#1a1a2e',
+              borderRadius: '6px',
+              fontSize: '13px',
+              color: '#ddd',
+            }}>
+              {idea.title}
+              <span style={{ display: 'block', fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                {LEVEL_TO_STAGE[idea.level]} · {idea.domain}
+              </span>
+            </li>
+          ))}
+          {results.length === 0 && keyword && (
+            <p style={{ color: '#666', fontSize: '13px' }}>Aucun résultat.</p>
+          )}
+        </ul>
       </div>
-
-      {/* Bouton */}
-      <button onClick={handleSearch} style={buttonStyle}>
-        Rechercher
-      </button>
     </div>
   );
 };
@@ -107,18 +101,6 @@ const inputStyle: React.CSSProperties = {
   borderRadius: '6px',
   color: '#e0e0e0',
   fontSize: '13px',
-};
-
-const buttonStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px',
-  background: '#0f3460',
-  color: '#e0e0e0',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  fontSize: '14px',
-  marginTop: '4px',
 };
 
 export default SearchPanel;

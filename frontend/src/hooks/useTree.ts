@@ -1,47 +1,64 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import type { Arbre } from '../types';
+import type { Tree } from '../types';
 
 export const useTree = () => {
-  const [arbre, setArbre] = useState<Arbre | null>(null);
+  const [tree, setTree] = useState<Tree | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchArbre = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get<Arbre>('/tree');
-      setArbre(response.data);
-    } catch (err) {
-      setError('Erreur lors du chargement de l\'arbre');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const voteNoeud = async (noeudId: number, score: number) => {
-    await api.post(`/noeuds/${noeudId}/vote`, { score });
-    await fetchArbre();
-  };
-
-  const voteArgument = async (argumentId: number, score: number) => {
-    await api.post(`/arguments/${argumentId}/vote`, { score });
-    await fetchArbre();
-  };
-
-  const addArgument = async (noeudId: number, content: string, type: 'pour' | 'contre') => {
-    await api.post(`/noeuds/${noeudId}/arguments`, { content, type });
-    await fetchArbre();
-  };
-
-  const addAmendement = async (noeudId: number, content: string) => {
-    await api.post(`/noeuds/${noeudId}/amendements`, { content });
-    await fetchArbre();
-  };
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    fetchArbre();
-  }, []);
+    const load = async () => {
+      setLoading(true);
+      try {
+        const r = await api.get<Tree>('/tree');
+        setTree(r.data);
+      } catch {
+        setError("Erreur lors du chargement de l'arbre");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [refresh]);
 
-  return { arbre, loading, error, voteNoeud, voteArgument, addArgument, addAmendement };
+  const refreshTree = () => setRefresh(n => n + 1);
+
+  const voteIdea = async (ideaId: string, score: number) => {
+    await api.put(`/ideas/${ideaId}/vote`, { score });
+    refreshTree();
+  };
+
+  const voteArgument = async (argumentId: string, score: number) => {
+    await api.put(`/arguments/${argumentId}/vote`, { score });
+    refreshTree();
+  };
+
+  const addArgument = async (ideaId: string, content: string, side: 'pour' | 'contre') => {
+    await api.post(`/ideas/${ideaId}/arguments`, { content, side });
+    refreshTree();
+  };
+
+  const addAmendment = async (ideaId: string, content: string) => {
+    await api.post(`/ideas/${ideaId}/amendments`, { content });
+    refreshTree();
+  };
+
+  const createIdea = async (title: string, content: string, domain: string, branchId?: string) => {
+    await api.post('/ideas', { title, content, domain, branchId: branchId ?? null });
+    refreshTree();
+  };
+
+  const promoteIdea = async (ideaId: string) => {
+    await api.put(`/ideas/${ideaId}/promote`);
+    refreshTree();
+  };
+
+  const createBranch = async (name: string, description?: string) => {
+    await api.post('/branches', { name, description: description ?? null });
+    refreshTree();
+  };
+
+  return { tree, loading, error, voteIdea, voteArgument, addArgument, addAmendment, createIdea, promoteIdea, createBranch };
 };
