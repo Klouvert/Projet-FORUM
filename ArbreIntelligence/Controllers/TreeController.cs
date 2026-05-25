@@ -32,10 +32,10 @@ public class TreeController(AppDbContext db) : ControllerBase
             .Include(i => i.Author)
             .Select(i => new IdeaNodeDto(
                 i.Id, i.Title, i.Content,
-                (int)i.Level, i.Status.ToString(),
+                (int)i.Level, i.Status.ToString(), i.Domain.ToString().ToLower(),
                 i.Votes.Any() ? i.Votes.Average(x => x.Score) : 0,
                 i.Votes.Count, i.CreatedAt,
-                i.Author.DisplayName))
+                i.Author.DisplayName, i.BranchId))
             .ToListAsync();
 
         return new TreeDto(trunkValues, branches, ideas);

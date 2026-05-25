@@ -52,7 +52,7 @@ public static class SeedData
                 Id = Guid.NewGuid(), Title = "Réforme des programmes scolaires",
                 Content = "Intégrer la pensée critique dès le primaire.",
                 AuthorId = demo.Id, BranchId = branch.Id,
-                Level = IdeaLevel.Branch, Status = IdeaStatus.Active,
+                Level = IdeaLevel.Fruit, Status = IdeaStatus.Active, Domain = IdeaDomain.Social,
                 CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
             },
             new Idea
@@ -60,7 +60,7 @@ public static class SeedData
                 Id = Guid.NewGuid(), Title = "Revenu universel de base",
                 Content = "Garantir un minimum vital à chaque citoyen.",
                 AuthorId = demo.Id, BranchId = null,
-                Level = IdeaLevel.Seed, Status = IdeaStatus.Active,
+                Level = IdeaLevel.Bud, Status = IdeaStatus.Active, Domain = IdeaDomain.Economy,
                 CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
             }
         );

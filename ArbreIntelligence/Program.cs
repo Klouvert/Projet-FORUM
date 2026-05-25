@@ -1,7 +1,11 @@
+using System.Text;
 using ArbreIntelligence.Data;
 using ArbreIntelligence.Entities;
+using ArbreIntelligence.Settings;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,26 +31,41 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
-// Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+// Identity (core uniquement — API REST, pas de cookies)
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
     options.Password.RequireDigit = false;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
 })
+.AddRoles<IdentityRole<Guid>>()
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
+// JWT
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+builder.Services.AddSingleton(jwtSettings);
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtSettings.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+        };
+    });
+
+builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-
-// CORS — autorise le frontend Vite (port 5173)
-builder.Services.AddCors(options =>
-    options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()));
 
 var app = builder.Build();
 
@@ -54,20 +73,19 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // En dev SQLite : recrée proprement si nécessaire
     if (dbProvider == "sqlite")
         db.Database.EnsureCreated();
     else
-        db.Database.Migrate(); // Postgres : migrations versionnées
-    
-    await SeedData.InitializeAsync(scope.ServiceProvider);
+        db.Database.Migrate();
 
+    await SeedData.InitializeAsync(scope.ServiceProvider);
 }
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
 app.UseCors();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
