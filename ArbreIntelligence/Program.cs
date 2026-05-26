@@ -74,7 +74,38 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     if (dbProvider == "sqlite")
-        db.Database.EnsureCreated();
+    {
+        // Vérifie si la DB existe déjà (créée par EnsureCreated sans historique de migrations)
+        bool hasExistingSchema = false;
+        try
+        {
+            db.Database.OpenConnection();
+            using var cmd = db.Database.GetDbConnection().CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='TrunkValues'";
+            hasExistingSchema = (long)(cmd.ExecuteScalar() ?? 0L) > 0;
+            db.Database.CloseConnection();
+        }
+        catch { /* DB inexistante — sera créée par Migrate() */ }
+
+        if (hasExistingSchema)
+        {
+            // Bootstrap : crée la table d'historique et marque les migrations initiales comme appliquées
+            db.Database.ExecuteSqlRaw("""
+                CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                    "MigrationId" TEXT NOT NULL PRIMARY KEY,
+                    "ProductVersion" TEXT NOT NULL
+                )
+            """);
+            db.Database.ExecuteSqlRaw("""
+                INSERT OR IGNORE INTO "__EFMigrationsHistory" VALUES
+                ('20260525061923_InitialCreate', '10.0.8'),
+                ('20260525095742_AddIdeaDomain', '10.0.8')
+            """);
+        }
+
+        // Applique toutes les migrations en attente (dont AddSubBranches)
+        db.Database.Migrate();
+    }
     else
         db.Database.Migrate();
 

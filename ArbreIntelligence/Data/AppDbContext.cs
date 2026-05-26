@@ -48,6 +48,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             .HasForeignKey(b => b.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Entity<Branch>()
+            .HasOne(b => b.ParentBranch)
+            .WithMany(b => b.ChildBranches)
+            .HasForeignKey(b => b.ParentBranchId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Entity<Idea>()
             .HasOne(i => i.Author)
             .WithMany(u => u.Ideas)
