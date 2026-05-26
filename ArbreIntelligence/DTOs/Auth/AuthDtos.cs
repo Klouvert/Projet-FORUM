@@ -17,5 +17,6 @@ public record AuthResponse(
     string UserId,
     string DisplayName,
     string Email,
-    DateTime ExpiresAt
+    DateTime ExpiresAt,
+    bool IsAdmin
 );

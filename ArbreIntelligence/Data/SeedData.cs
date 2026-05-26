@@ -10,8 +10,21 @@ public static class SeedData
     {
         var db          = services.GetRequiredService<AppDbContext>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-        if (db.TrunkValues.Any()) return; // déjà seedé
+        /* ── Rôle Admin (idempotent) ─────────────────────────────── */
+        if (!await roleManager.RoleExistsAsync("Admin"))
+            await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+
+        /* ── Données initiales ───────────────────────────────────── */
+        if (db.TrunkValues.Any())
+        {
+            // DB déjà seedée : s'assurer quand même que Ben est admin
+            var existing = await userManager.FindByEmailAsync("benoit.kreins@live.com");
+            if (existing is not null && !await userManager.IsInRoleAsync(existing, "Admin"))
+                await userManager.AddToRoleAsync(existing, "Admin");
+            return;
+        }
 
         /* ── Valeurs du tronc ─────────────────────────────────── */
         db.TrunkValues.AddRange(
@@ -20,7 +33,7 @@ public static class SeedData
             new TrunkValue { Id = Guid.NewGuid(), Name = "Solidarité", Description = "Soutien mutuel entre les membres de la communauté." }
         );
 
-        /* ── Utilisateur de démo ──────────────────────────────── */
+        /* ── Utilisateur de démo (admin) ──────────────────────────── */
         var demo = new ApplicationUser
         {
             Id             = Guid.NewGuid(),
@@ -31,8 +44,9 @@ public static class SeedData
             CreatedAt      = DateTime.UtcNow
         };
         await userManager.CreateAsync(demo, "demo123");
+        await userManager.AddToRoleAsync(demo, "Admin");
 
-        /* ── Branche 1 : Éducation ────────────────────────────── */
+        /* ── Branche 1 : Éducation ────────────────────────────────── */
         var branchEdu = new Branch
         {
             Id               = Guid.NewGuid(),
@@ -43,7 +57,7 @@ public static class SeedData
         };
         db.Branches.Add(branchEdu);
 
-        /* ── Branche 2 : Économie ─────────────────────────────── */
+        /* ── Branche 2 : Économie ─────────────────────────────────── */
         var branchEco = new Branch
         {
             Id               = Guid.NewGuid(),
@@ -54,7 +68,7 @@ public static class SeedData
         };
         db.Branches.Add(branchEco);
 
-        /* ── Branche 3 : Démocratie ───────────────────────────── */
+        /* ── Branche 3 : Démocratie ───────────────────────────────── */
         var branchDemo = new Branch
         {
             Id               = Guid.NewGuid(),
@@ -65,9 +79,8 @@ public static class SeedData
         };
         db.Branches.Add(branchDemo);
 
-        /* ── Idées ────────────────────────────────────────────── */
+        /* ── Idées ────────────────────────────────────────────────── */
         db.Ideas.AddRange(
-            // Branche Éducation
             new Idea
             {
                 Id        = Guid.NewGuid(),
@@ -77,8 +90,6 @@ public static class SeedData
                 Level     = IdeaLevel.Fruit, Status = IdeaStatus.Active, Domain = IdeaDomain.Social,
                 CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
             },
-
-            // Branche Économie
             new Idea
             {
                 Id        = Guid.NewGuid(),
@@ -88,8 +99,6 @@ public static class SeedData
                 Level     = IdeaLevel.Bud, Status = IdeaStatus.Active, Domain = IdeaDomain.Economy,
                 CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
             },
-
-            // Branche Démocratie — 4 étapes
             new Idea
             {
                 Id        = Guid.NewGuid(),

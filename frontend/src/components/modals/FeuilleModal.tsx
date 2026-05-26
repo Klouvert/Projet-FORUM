@@ -1,12 +1,17 @@
 import type { IdeaDetail } from '../../types';
 import ScoreChart from '../ui/ScoreChart';
+import { useAuth } from '../../context/AuthContext';
 
 interface FeuilleModalProps {
   idea: IdeaDetail;
   onClose: () => void;
+  onDelete: (ideaId: string) => Promise<void>;
 }
 
-const FeuilleModal = ({ idea, onClose }: FeuilleModalProps) => {
+const FeuilleModal = ({ idea, onClose, onDelete }: FeuilleModalProps) => {
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin ?? false;
+
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div className="modal-animate" style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -16,7 +21,10 @@ const FeuilleModal = ({ idea, onClose }: FeuilleModalProps) => {
             <span style={{ ...badgeStyle, background: '#4CAF50' }}>🍃 Feuille</span>
             <h2 style={{ fontSize: '18px', marginTop: '8px' }}>{idea.title}</h2>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}>✕</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {isAdmin && <button onClick={() => onDelete(idea.id)} title="Supprimer (admin)" style={deleteBtnStyle}>🗑</button>}
+            <button onClick={onClose} style={closeBtnStyle}>✕</button>
+          </div>
         </div>
 
         <div style={{
@@ -90,6 +98,7 @@ const FeuilleModal = ({ idea, onClose }: FeuilleModalProps) => {
   );
 };
 
+const deleteBtnStyle: React.CSSProperties = { background: 'rgba(229,57,53,0.15)', border: '1px solid #e53935', borderRadius: '6px', color: '#e57373', fontSize: '14px', cursor: 'pointer', padding: '3px 8px' };
 const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalStyle: React.CSSProperties = { background: 'var(--bg-panel)', borderRadius: 'var(--radius-lg)', padding: '24px', width: '540px', maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto', color: 'var(--text-primary)', boxShadow: 'var(--shadow-modal)' };
 const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' };

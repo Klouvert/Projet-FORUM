@@ -12,7 +12,7 @@ namespace ArbreIntelligence.Controllers;
 [Route("api/[controller]")]
 public class BranchesController(AppDbContext db) : ControllerBase
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<ActionResult<BranchDto>> Create(CreateBranchRequest request)
     {

@@ -10,11 +10,13 @@ interface BourGeonModalProps {
   onVote: (ideaId: string, score: number) => void;
   onAddArgument: (ideaId: string, content: string, side: 'pour' | 'contre') => Promise<void>;
   onPromote: (ideaId: string) => Promise<void>;
+  onDelete: (ideaId: string) => Promise<void>;
 }
 
-const BourGeonModal = ({ idea, onClose, onVote, onAddArgument, onPromote }: BourGeonModalProps) => {
+const BourGeonModal = ({ idea, onClose, onVote, onAddArgument, onPromote, onDelete }: BourGeonModalProps) => {
   const { user } = useAuth();
   const isAuthor = user?.userId === idea.authorId;
+  const isAdmin = user?.isAdmin ?? false;
   const [newArgument, setNewArgument] = useState('');
   const [argumentSide, setArgumentSide] = useState<'pour' | 'contre'>('pour');
   const [argFeedback, setArgFeedback] = useState<'success' | 'error' | null>(null);
@@ -45,7 +47,12 @@ const BourGeonModal = ({ idea, onClose, onVote, onAddArgument, onPromote }: Bour
             <span style={{ ...badgeStyle, background: '#9C27B0' }}>🌱 Bourgeon</span>
             <h2 style={{ fontSize: '18px', marginTop: '8px' }}>{idea.title}</h2>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}>✕</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {isAdmin && (
+              <button onClick={() => onDelete(idea.id)} title="Supprimer (admin)" style={deleteBtnStyle}>🗑</button>
+            )}
+            <button onClick={onClose} style={closeBtnStyle}>✕</button>
+          </div>
         </div>
 
         <p style={{ color: '#aaa', fontSize: '14px', lineHeight: 1.6, marginBottom: '16px' }}>
@@ -194,6 +201,10 @@ const badgeStyle: React.CSSProperties = {
   color: '#fff',
 };
 
+const deleteBtnStyle: React.CSSProperties = {
+  background: 'rgba(229,57,53,0.15)', border: '1px solid #e53935',
+  borderRadius: '6px', color: '#e57373', fontSize: '14px', cursor: 'pointer', padding: '3px 8px',
+};
 const closeBtnStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',

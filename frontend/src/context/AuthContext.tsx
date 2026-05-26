@@ -5,6 +5,7 @@ interface AuthUser {
   userId: string;
   displayName: string;
   email: string;
+  isAdmin: boolean;
 }
 
 interface AuthContextValue {
@@ -31,29 +32,26 @@ const loadUser = (): AuthUser | null => {
   }
 };
 
+type ApiAuthResponse = { token: string; userId: string; displayName: string; email: string; isAdmin: boolean };
+
+const saveSession = (data: ApiAuthResponse): AuthUser => {
+  const u: AuthUser = { userId: data.userId, displayName: data.displayName, email: data.email, isAdmin: data.isAdmin };
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('auth_user', JSON.stringify(u));
+  return u;
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(loadUser);
 
   const login = async (email: string, password: string) => {
-    const r = await api.post<{ token: string; userId: string; displayName: string; email: string }>(
-      '/auth/login',
-      { email, password }
-    );
-    const u: AuthUser = { userId: r.data.userId, displayName: r.data.displayName, email: r.data.email };
-    localStorage.setItem('token', r.data.token);
-    localStorage.setItem('auth_user', JSON.stringify(u));
-    setUser(u);
+    const r = await api.post<ApiAuthResponse>('/auth/login', { email, password });
+    setUser(saveSession(r.data));
   };
 
   const register = async (username: string, email: string, password: string, displayName: string) => {
-    const r = await api.post<{ token: string; userId: string; displayName: string; email: string }>(
-      '/auth/register',
-      { username, email, password, displayName }
-    );
-    const u: AuthUser = { userId: r.data.userId, displayName: r.data.displayName, email: r.data.email };
-    localStorage.setItem('token', r.data.token);
-    localStorage.setItem('auth_user', JSON.stringify(u));
-    setUser(u);
+    const r = await api.post<ApiAuthResponse>('/auth/register', { username, email, password, displayName });
+    setUser(saveSession(r.data));
   };
 
   const logout = () => {

@@ -60,5 +60,20 @@ export const useTree = () => {
     refreshTree();
   };
 
-  return { tree, loading, error, voteIdea, voteArgument, addArgument, addAmendment, createIdea, promoteIdea, createBranch };
+  const createTrunkValue = async (name: string, description: string) => {
+    await api.post('/trunk-values', { name, description });
+    refreshTree();
+  };
+
+  const deleteTrunkValue = async (id: string) => {
+    await api.delete(`/trunk-values/${id}`);
+    refreshTree();
+  };
+
+  const deleteIdea = async (id: string) => {
+    await api.delete(`/ideas/${id}`);
+    refreshTree();
+  };
+
+  return { tree, loading, error, voteIdea, voteArgument, addArgument, addAmendment, createIdea, promoteIdea, createBranch, createTrunkValue, deleteTrunkValue, deleteIdea };
 };

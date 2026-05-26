@@ -6,7 +6,11 @@ import CreateIdeaModal from '../components/modals/CreateIdeaModal';
 import type { Domain } from '../types';
 
 const Home = () => {
-  const { tree, loading, error, voteIdea, addArgument, addAmendment, createIdea, promoteIdea, createBranch } = useTree();
+  const {
+    tree, loading, error,
+    voteIdea, addArgument, addAmendment, createIdea, promoteIdea,
+    createBranch, createTrunkValue, deleteTrunkValue, deleteIdea,
+  } = useTree();
   const [createBranchId, setCreateBranchId] = useState<string | undefined>(undefined);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -37,7 +41,10 @@ const Home = () => {
       <Sidebar
         branches={tree?.branches ?? []}
         ideas={tree?.ideas ?? []}
+        trunkValues={tree?.trunkValues ?? []}
         onCreateBranch={createBranch}
+        onCreateTrunkValue={createTrunkValue}
+        onDeleteTrunkValue={deleteTrunkValue}
       />
 
       <main className="tree-container" style={{ position: 'relative' }}>
@@ -48,6 +55,7 @@ const Home = () => {
           onAddAmendment={addAmendment}
           onPromote={promoteIdea}
           onRequestCreate={handleRequestCreate}
+          onDeleteIdea={deleteIdea}
         />
       </main>
 

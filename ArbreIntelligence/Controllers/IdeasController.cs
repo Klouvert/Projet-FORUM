@@ -191,6 +191,18 @@ public class IdeasController(AppDbContext db) : ControllerBase
             idea.Votes.Count, idea.CreatedAt, idea.Author.DisplayName, idea.BranchId));
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var idea = await db.Ideas.FindAsync(id);
+        if (idea is null) return NotFound();
+
+        db.Ideas.Remove(idea);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     [Authorize]
     [HttpPut("{id:guid}/vote")]
     public async Task<IActionResult> Vote(Guid id, VoteRequest request)

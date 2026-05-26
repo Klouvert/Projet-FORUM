@@ -8,11 +8,13 @@ interface FruitModalProps {
   onClose: () => void;
   onVote: (ideaId: string, score: number) => void;
   onPromote: (ideaId: string) => Promise<void>;
+  onDelete: (ideaId: string) => Promise<void>;
 }
 
-const FruitModal = ({ idea, onClose, onVote, onPromote }: FruitModalProps) => {
+const FruitModal = ({ idea, onClose, onVote, onPromote, onDelete }: FruitModalProps) => {
   const { user } = useAuth();
   const isAuthor = user?.userId === idea.authorId;
+  const isAdmin = user?.isAdmin ?? false;
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div className="modal-animate" style={modalStyle} onClick={(e) => e.stopPropagation()}>
@@ -22,7 +24,10 @@ const FruitModal = ({ idea, onClose, onVote, onPromote }: FruitModalProps) => {
             <span style={{ ...badgeStyle, background: '#FFC107', color: '#000' }}>🍊 Fruit</span>
             <h2 style={{ fontSize: '18px', marginTop: '8px' }}>{idea.title}</h2>
           </div>
-          <button onClick={onClose} style={closeBtnStyle}>✕</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {isAdmin && <button onClick={() => onDelete(idea.id)} title="Supprimer (admin)" style={deleteBtnStyle}>🗑</button>}
+            <button onClick={onClose} style={closeBtnStyle}>✕</button>
+          </div>
         </div>
 
         <p style={{ color: '#aaa', fontSize: '14px', lineHeight: 1.6, marginBottom: '16px' }}>
@@ -77,6 +82,7 @@ const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, backgro
 const modalStyle: React.CSSProperties = { background: 'var(--bg-panel)', borderRadius: 'var(--radius-lg)', padding: '24px', width: '540px', maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto', color: 'var(--text-primary)', boxShadow: 'var(--shadow-modal)' };
 const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' };
 const badgeStyle: React.CSSProperties = { padding: '3px 10px', borderRadius: '12px', fontSize: '11px' };
+const deleteBtnStyle: React.CSSProperties = { background: 'rgba(229,57,53,0.15)', border: '1px solid #e53935', borderRadius: '6px', color: '#e57373', fontSize: '14px', cursor: 'pointer', padding: '3px 8px' };
 const closeBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#888', fontSize: '18px', cursor: 'pointer' };
 const sectionStyle: React.CSSProperties = { borderTop: '1px solid #0f3460', paddingTop: '16px', marginTop: '16px' };
 const sectionTitleStyle: React.CSSProperties = { fontSize: '13px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' };
