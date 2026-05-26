@@ -18,6 +18,13 @@ interface TreeCanvasProps {
   onPromote: (ideaId: string) => Promise<void>;
   onRequestCreate: (branchId?: string) => void;
   onDeleteIdea: (ideaId: string) => Promise<void>;
+  onUpdateIdea: (ideaId: string, title: string, content: string) => Promise<void>;
+  onUpdateArgument: (id: string, content: string) => Promise<void>;
+  onDeleteArgument: (id: string) => Promise<void>;
+  onUpdateAmendment: (id: string, content: string) => Promise<void>;
+  onDeleteAmendment: (id: string) => Promise<void>;
+  requestOpenIdeaId?: string | null;
+  onIdeaOpened?: () => void;
 }
 
 /* ── Palette ───────────────────────────────────────────────── */
@@ -142,7 +149,9 @@ function appendAddButton(
 
 /* ── Composant ─────────────────────────────────────────────── */
 const TreeCanvas = ({
-  tree, onVoteIdea, onAddArgument, onAddAmendment, onPromote, onRequestCreate, onDeleteIdea,
+  tree, onVoteIdea, onAddArgument, onAddAmendment, onPromote, onRequestCreate,
+  onDeleteIdea, onUpdateIdea, onUpdateArgument, onDeleteArgument, onUpdateAmendment, onDeleteAmendment,
+  requestOpenIdeaId, onIdeaOpened,
 }: TreeCanvasProps) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedDetail, setSelectedDetail] = useState<IdeaDetail | null>(null);
@@ -176,6 +185,16 @@ const TreeCanvas = ({
     setSelectedDetail(null);
     setSelectedId(null);
   };
+
+  /* Ouvre la modale depuis un déclencheur externe (ex: résultat de recherche) */
+  useEffect(() => {
+    if (!requestOpenIdeaId || !tree) return;
+    const idea = tree.ideas.find(i => i.id === requestOpenIdeaId);
+    if (idea) {
+      openDetail(idea);
+      onIdeaOpened?.();
+    }
+  }, [requestOpenIdeaId]);
 
   useEffect(() => {
     if (!tree || !svgRef.current) return;
@@ -419,10 +438,10 @@ const TreeCanvas = ({
         </div>
       )}
 
-      {selectedDetail && stage === 'bud'    && <BourGeonModal idea={selectedDetail} onClose={closeModal} onVote={onVoteIdea} onAddArgument={onAddArgument} onPromote={handlePromote} onDelete={handleDelete} />}
-      {selectedDetail && stage === 'flower' && <FleurModal    idea={selectedDetail} onClose={closeModal} onVote={onVoteIdea} onAddAmendment={onAddAmendment} onPromote={handlePromote} onDelete={handleDelete} />}
-      {selectedDetail && stage === 'fruit'  && <FruitModal    idea={selectedDetail} onClose={closeModal} onVote={onVoteIdea} onPromote={handlePromote} onDelete={handleDelete} />}
-      {selectedDetail && stage === 'leaf'   && <FeuilleModal  idea={selectedDetail} onClose={closeModal} onDelete={handleDelete} />}
+      {selectedDetail && stage === 'bud'    && <BourGeonModal idea={selectedDetail} onClose={closeModal} onVote={onVoteIdea} onAddArgument={onAddArgument} onPromote={handlePromote} onDelete={handleDelete} onUpdateIdea={onUpdateIdea} onUpdateArgument={onUpdateArgument} onDeleteArgument={onDeleteArgument} />}
+      {selectedDetail && stage === 'flower' && <FleurModal    idea={selectedDetail} onClose={closeModal} onVote={onVoteIdea} onAddAmendment={onAddAmendment} onPromote={handlePromote} onDelete={handleDelete} onUpdateIdea={onUpdateIdea} onUpdateAmendment={onUpdateAmendment} onDeleteAmendment={onDeleteAmendment} />}
+      {selectedDetail && stage === 'fruit'  && <FruitModal    idea={selectedDetail} onClose={closeModal} onVote={onVoteIdea} onPromote={handlePromote} onDelete={handleDelete} onUpdateIdea={onUpdateIdea} />}
+      {selectedDetail && stage === 'leaf'   && <FeuilleModal  idea={selectedDetail} onClose={closeModal} onDelete={handleDelete} onUpdateIdea={onUpdateIdea} />}
 
       <TreeLegend />
     </div>

@@ -16,6 +16,7 @@ export interface Argument {
   voteCount: number;
   createdAt: string;
   authorName: string;
+  authorId: string;
 }
 
 export interface Amendment {
@@ -27,6 +28,7 @@ export interface Amendment {
   voteCount: number;
   createdAt: string;
   authorName: string;
+  authorId: string;
 }
 
 export interface IdeaNode {

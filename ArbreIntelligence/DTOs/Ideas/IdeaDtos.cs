@@ -7,7 +7,8 @@ public record ArgumentDto(
     double AverageScore,
     int VoteCount,
     DateTime CreatedAt,
-    string AuthorName
+    string AuthorName,
+    Guid AuthorId
 );
 
 public record AmendmentDto(
@@ -18,7 +19,8 @@ public record AmendmentDto(
     double AverageScore,
     int VoteCount,
     DateTime CreatedAt,
-    string AuthorName
+    string AuthorName,
+    Guid AuthorId
 );
 
 public record IdeaSummaryDto(
@@ -54,3 +56,6 @@ public record IdeaDetailDto(
 );
 
 public record VoteRequest(int Score);
+public record UpdateIdeaRequest(string Title, string Content);
+public record UpdateArgumentRequest(string Content);
+public record UpdateAmendmentRequest(string Content);

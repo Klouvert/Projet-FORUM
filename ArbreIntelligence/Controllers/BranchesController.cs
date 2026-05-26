@@ -5,6 +5,7 @@ using ArbreIntelligence.DTOs.Tree;
 using ArbreIntelligence.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ArbreIntelligence.Controllers;
 
@@ -36,6 +37,24 @@ public class BranchesController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         return Ok(new BranchDto(branch.Id, branch.Name, branch.Description, 0, branch.CreatedAt));
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<BranchDto>> Update(Guid id, CreateBranchRequest request)
+    {
+        var branch = await db.Branches.FindAsync(id);
+        if (branch is null) return NotFound();
+
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 100)
+            return BadRequest(new { error = "Le nom est requis et ne peut pas dépasser 100 caractères." });
+
+        branch.Name        = request.Name.Trim();
+        branch.Description = request.Description?.Trim();
+        await db.SaveChangesAsync();
+
+        var ideaCount = await db.Ideas.CountAsync(i => i.BranchId == id);
+        return Ok(new BranchDto(branch.Id, branch.Name, branch.Description, ideaCount, branch.CreatedAt));
     }
 
     private Guid? GetUserId()

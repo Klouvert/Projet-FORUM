@@ -8,27 +8,48 @@ interface SidebarProps {
   branches: Branch[];
   ideas: IdeaNode[];
   trunkValues: TrunkValue[];
+  onSelectIdea: (idea: IdeaNode) => void;
   onCreateBranch: (name: string, description?: string) => Promise<void>;
+  onUpdateBranch: (id: string, name: string, description?: string) => Promise<void>;
   onCreateTrunkValue: (name: string, description: string) => Promise<void>;
+  onUpdateTrunkValue: (id: string, name: string, description: string) => Promise<void>;
   onDeleteTrunkValue: (id: string) => Promise<void>;
 }
 
 type Tab = 'branches' | 'recherche' | 'racines';
 
-const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkValue, onDeleteTrunkValue }: SidebarProps) => {
+const Sidebar = ({
+  branches, ideas, trunkValues, onSelectIdea,
+  onCreateBranch, onUpdateBranch,
+  onCreateTrunkValue, onUpdateTrunkValue, onDeleteTrunkValue,
+}: SidebarProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('branches');
   const { user, logout } = useAuth();
   const isAdmin = user?.isAdmin ?? false;
 
+  /* ── Branch form ────────────────────────────────────────────── */
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [branchName, setBranchName] = useState('');
   const [branchDesc, setBranchDesc] = useState('');
   const [branchSaving, setBranchSaving] = useState(false);
 
+  /* ── Branch edit ────────────────────────────────────────────── */
+  const [editBranchId, setEditBranchId] = useState<string | null>(null);
+  const [editBranchName, setEditBranchName] = useState('');
+  const [editBranchDesc, setEditBranchDesc] = useState('');
+  const [editBranchSaving, setEditBranchSaving] = useState(false);
+
+  /* ── Trunk value form ───────────────────────────────────────── */
   const [showValueForm, setShowValueForm] = useState(false);
   const [valueName, setValueName] = useState('');
   const [valueDesc, setValueDesc] = useState('');
   const [valueSaving, setValueSaving] = useState(false);
+
+  /* ── Trunk value edit ───────────────────────────────────────── */
+  const [editValueId, setEditValueId] = useState<string | null>(null);
+  const [editValueName, setEditValueName] = useState('');
+  const [editValueDesc, setEditValueDesc] = useState('');
+  const [editValueSaving, setEditValueSaving] = useState(false);
 
   const handleCreateBranch = async () => {
     if (!branchName.trim()) return;
@@ -36,9 +57,22 @@ const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkVa
     try {
       await onCreateBranch(branchName.trim(), branchDesc.trim() || undefined);
       setBranchName(''); setBranchDesc(''); setShowBranchForm(false);
-    } finally {
-      setBranchSaving(false);
-    }
+    } finally { setBranchSaving(false); }
+  };
+
+  const startEditBranch = (b: Branch) => {
+    setEditBranchId(b.id);
+    setEditBranchName(b.name);
+    setEditBranchDesc(b.description ?? '');
+  };
+
+  const handleUpdateBranch = async () => {
+    if (!editBranchId || !editBranchName.trim()) return;
+    setEditBranchSaving(true);
+    try {
+      await onUpdateBranch(editBranchId, editBranchName.trim(), editBranchDesc.trim() || undefined);
+      setEditBranchId(null);
+    } finally { setEditBranchSaving(false); }
   };
 
   const handleCreateValue = async () => {
@@ -47,9 +81,22 @@ const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkVa
     try {
       await onCreateTrunkValue(valueName.trim(), valueDesc.trim());
       setValueName(''); setValueDesc(''); setShowValueForm(false);
-    } finally {
-      setValueSaving(false);
-    }
+    } finally { setValueSaving(false); }
+  };
+
+  const startEditValue = (tv: TrunkValue) => {
+    setEditValueId(tv.id);
+    setEditValueName(tv.name);
+    setEditValueDesc(tv.description);
+  };
+
+  const handleUpdateValue = async () => {
+    if (!editValueId || !editValueName.trim() || !editValueDesc.trim()) return;
+    setEditValueSaving(true);
+    try {
+      await onUpdateTrunkValue(editValueId, editValueName.trim(), editValueDesc.trim());
+      setEditValueId(null);
+    } finally { setEditValueSaving(false); }
   };
 
   return (
@@ -65,10 +112,7 @@ const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkVa
         <span style={{ fontSize: '13px', color: '#aaa', display: 'flex', alignItems: 'center', gap: '6px' }}>
           🌳 <strong style={{ color: '#e0e0e0' }}>{user?.displayName}</strong>
           {isAdmin && (
-            <span style={{
-              fontSize: '9px', background: '#7e57c2', color: '#fff',
-              borderRadius: '4px', padding: '1px 5px', letterSpacing: '0.4px',
-            }}>ADMIN</span>
+            <span style={{ fontSize: '9px', background: '#7e57c2', color: '#fff', borderRadius: '4px', padding: '1px 5px', letterSpacing: '0.4px' }}>ADMIN</span>
           )}
         </span>
         <button onClick={logout} title="Déconnexion" style={{
@@ -105,24 +149,44 @@ const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkVa
           <>
             <ul style={{ listStyle: 'none', marginBottom: '10px' }}>
               {branches.map((branch) => (
-                <li key={branch.id} style={{
-                  padding: '10px 12px', marginBottom: '6px', background: '#1a1a2e',
-                  borderRadius: '8px', fontSize: '14px', color: '#e0e0e0',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                }}>
-                  <span>{branch.name}</span>
-                  <span style={{
-                    fontSize: '11px', color: '#888', background: '#0f3460',
-                    padding: '2px 8px', borderRadius: '12px',
-                  }}>
-                    {branch.ideaCount} idées
-                  </span>
+                <li key={branch.id} style={{ marginBottom: '6px' }}>
+                  {editBranchId === branch.id ? (
+                    <div style={formBoxStyle}>
+                      <input type="text" value={editBranchName}
+                        onChange={(e) => setEditBranchName(e.target.value)} style={inputStyle} autoFocus />
+                      <input type="text" value={editBranchDesc} placeholder="Description (optionnelle)"
+                        onChange={(e) => setEditBranchDesc(e.target.value)} style={inputStyle} />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={handleUpdateBranch} disabled={editBranchSaving || !editBranchName.trim()}
+                          style={{ ...actionBtnStyle, background: '#0f3460', flex: 1 }}>
+                          {editBranchSaving ? '...' : 'Enregistrer'}
+                        </button>
+                        <button onClick={() => setEditBranchId(null)}
+                          style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid #0f3460', color: '#888' }}>
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '10px 12px', background: '#1a1a2e', borderRadius: '8px',
+                      fontSize: '14px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    }}>
+                      <span>{branch.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: '#888', background: '#0f3460', padding: '2px 8px', borderRadius: '12px' }}>
+                          {branch.ideaCount} idées
+                        </span>
+                        {isAdmin && (
+                          <button onClick={() => startEditBranch(branch)} title="Modifier" style={iconBtnStyle}>✏</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
               {branches.length === 0 && (
-                <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>
-                  Aucune branche disponible
-                </p>
+                <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune branche</p>
               )}
             </ul>
 
@@ -145,46 +209,60 @@ const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkVa
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setShowBranchForm(true)} style={dashedBtnStyle}>
-                  + Nouvelle branche
-                </button>
+                <button onClick={() => setShowBranchForm(true)} style={dashedBtnStyle}>+ Nouvelle branche</button>
               )
             )}
           </>
         )}
 
         {/* ── Recherche ─────────────────────────────────────── */}
-        {activeTab === 'recherche' && <SearchPanel ideas={ideas} />}
+        {activeTab === 'recherche' && <SearchPanel ideas={ideas} onSelectIdea={onSelectIdea} />}
 
-        {/* ── Racines (valeurs du tronc) ─────────────────────── */}
+        {/* ── Racines ───────────────────────────────────────── */}
         {activeTab === 'racines' && (
           <>
             <ul style={{ listStyle: 'none', marginBottom: '10px' }}>
               {trunkValues.map((tv) => (
-                <li key={tv.id} style={{
-                  padding: '10px 12px', marginBottom: '6px', background: '#1a1a2e',
-                  borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                }}>
-                  <div>
-                    <div style={{ fontSize: '13px', color: '#e0e0e0', fontWeight: 500 }}>{tv.name}</div>
-                    <div style={{ fontSize: '11px', color: '#888', marginTop: '3px', lineHeight: 1.4 }}>
-                      {tv.description}
+                <li key={tv.id} style={{ marginBottom: '6px' }}>
+                  {editValueId === tv.id ? (
+                    <div style={formBoxStyle}>
+                      <input type="text" value={editValueName}
+                        onChange={(e) => setEditValueName(e.target.value)} style={inputStyle} autoFocus />
+                      <textarea value={editValueDesc} rows={3}
+                        onChange={(e) => setEditValueDesc(e.target.value)}
+                        style={{ ...inputStyle, resize: 'vertical' }} />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={handleUpdateValue} disabled={editValueSaving || !editValueName.trim() || !editValueDesc.trim()}
+                          style={{ ...actionBtnStyle, background: '#4CAF50', flex: 1 }}>
+                          {editValueSaving ? '...' : 'Enregistrer'}
+                        </button>
+                        <button onClick={() => setEditValueId(null)}
+                          style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid #0f3460', color: '#888' }}>
+                          Annuler
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  {isAdmin && (
-                    <button onClick={() => onDeleteTrunkValue(tv.id)} title="Supprimer" style={{
-                      background: 'none', border: 'none', color: '#555', cursor: 'pointer',
-                      fontSize: '16px', padding: '0 0 0 8px', flexShrink: 0,
+                  ) : (
+                    <div style={{
+                      padding: '10px 12px', background: '#1a1a2e', borderRadius: '8px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
                     }}>
-                      ×
-                    </button>
+                      <div>
+                        <div style={{ fontSize: '13px', color: '#e0e0e0', fontWeight: 500 }}>{tv.name}</div>
+                        <div style={{ fontSize: '11px', color: '#888', marginTop: '3px', lineHeight: 1.4 }}>{tv.description}</div>
+                      </div>
+                      {isAdmin && (
+                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0, paddingLeft: '8px' }}>
+                          <button onClick={() => startEditValue(tv)} title="Modifier" style={iconBtnStyle}>✏</button>
+                          <button onClick={() => onDeleteTrunkValue(tv.id)} title="Supprimer" style={{ ...iconBtnStyle, color: '#e57373' }}>×</button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </li>
               ))}
               {trunkValues.length === 0 && (
-                <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>
-                  Aucune valeur fondatrice
-                </p>
+                <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune valeur fondatrice</p>
               )}
             </ul>
 
@@ -193,8 +271,8 @@ const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkVa
                 <div style={formBoxStyle}>
                   <input type="text" placeholder="Nom de la valeur *" value={valueName}
                     onChange={(e) => setValueName(e.target.value)} style={inputStyle} autoFocus />
-                  <textarea placeholder="Description *" value={valueDesc}
-                    onChange={(e) => setValueDesc(e.target.value)} rows={3}
+                  <textarea placeholder="Description *" value={valueDesc} rows={3}
+                    onChange={(e) => setValueDesc(e.target.value)}
                     style={{ ...inputStyle, resize: 'vertical' }} />
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={handleCreateValue} disabled={valueSaving || !valueName.trim() || !valueDesc.trim()}
@@ -208,9 +286,7 @@ const Sidebar = ({ branches, ideas, trunkValues, onCreateBranch, onCreateTrunkVa
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setShowValueForm(true)} style={dashedBtnStyle}>
-                  + Nouvelle valeur fondatrice
-                </button>
+                <button onClick={() => setShowValueForm(true)} style={dashedBtnStyle}>+ Nouvelle valeur fondatrice</button>
               )
             )}
           </>
@@ -234,6 +310,9 @@ const actionBtnStyle: React.CSSProperties = {
 const dashedBtnStyle: React.CSSProperties = {
   width: '100%', padding: '9px', background: 'transparent', border: '1px dashed #0f3460',
   borderRadius: '8px', color: '#888', fontSize: '13px', cursor: 'pointer',
+};
+const iconBtnStyle: React.CSSProperties = {
+  background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '14px', padding: '2px 4px',
 };
 
 export default Sidebar;

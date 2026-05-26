@@ -65,8 +65,23 @@ export const useTree = () => {
     refreshTree();
   };
 
+  const updateTrunkValue = async (id: string, name: string, description: string) => {
+    await api.put(`/trunk-values/${id}`, { name, description });
+    refreshTree();
+  };
+
   const deleteTrunkValue = async (id: string) => {
     await api.delete(`/trunk-values/${id}`);
+    refreshTree();
+  };
+
+  const updateBranch = async (id: string, name: string, description?: string) => {
+    await api.put(`/branches/${id}`, { name, description: description ?? null });
+    refreshTree();
+  };
+
+  const updateIdea = async (id: string, title: string, content: string) => {
+    await api.put(`/ideas/${id}`, { title, content });
     refreshTree();
   };
 
@@ -75,5 +90,33 @@ export const useTree = () => {
     refreshTree();
   };
 
-  return { tree, loading, error, voteIdea, voteArgument, addArgument, addAmendment, createIdea, promoteIdea, createBranch, createTrunkValue, deleteTrunkValue, deleteIdea };
+  const updateArgument = async (id: string, content: string) => {
+    await api.put(`/arguments/${id}`, { content });
+    refreshTree();
+  };
+
+  const deleteArgument = async (id: string) => {
+    await api.delete(`/arguments/${id}`);
+    refreshTree();
+  };
+
+  const updateAmendment = async (id: string, content: string) => {
+    await api.put(`/amendments/${id}`, { content });
+    refreshTree();
+  };
+
+  const deleteAmendment = async (id: string) => {
+    await api.delete(`/amendments/${id}`);
+    refreshTree();
+  };
+
+  return {
+    tree, loading, error,
+    voteIdea, voteArgument, addArgument, addAmendment,
+    createIdea, promoteIdea, updateIdea, deleteIdea,
+    createBranch, updateBranch,
+    createTrunkValue, updateTrunkValue, deleteTrunkValue,
+    updateArgument, deleteArgument,
+    updateAmendment, deleteAmendment,
+  };
 };

@@ -51,11 +51,11 @@ public class IdeasController(AppDbContext db) : ControllerBase
                 a.Id, a.Content,
                 a.Side == ArgumentSide.For ? "pour" : "contre",
                 a.Votes.Any() ? a.Votes.Average(x => x.Score) : 0,
-                a.Votes.Count, a.CreatedAt, a.Author.DisplayName)),
+                a.Votes.Count, a.CreatedAt, a.Author.DisplayName, a.AuthorId)),
             idea.Amendments.Select(am => new AmendmentDto(
                 am.Id, am.Title, am.Content, am.IsMerged,
                 am.Votes.Any() ? am.Votes.Average(x => x.Score) : 0,
-                am.Votes.Count, am.CreatedAt, am.Author.DisplayName)));
+                am.Votes.Count, am.CreatedAt, am.Author.DisplayName, am.AuthorId)));
     }
 
     [Authorize]
@@ -126,7 +126,7 @@ public class IdeasController(AppDbContext db) : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id },
             new ArgumentDto(argument.Id, argument.Content,
                 side == ArgumentSide.For ? "pour" : "contre",
-                0, 0, argument.CreatedAt, author.DisplayName));
+                0, 0, argument.CreatedAt, author.DisplayName, argument.AuthorId));
     }
 
     [Authorize]
@@ -160,7 +160,7 @@ public class IdeasController(AppDbContext db) : ControllerBase
 
         return CreatedAtAction(nameof(GetById), new { id },
             new AmendmentDto(amendment.Id, amendment.Title, amendment.Content,
-                false, 0, 0, amendment.CreatedAt, author.DisplayName));
+                false, 0, 0, amendment.CreatedAt, author.DisplayName, amendment.AuthorId));
     }
 
     [Authorize]
@@ -181,6 +181,32 @@ public class IdeasController(AppDbContext db) : ControllerBase
             return BadRequest(new { error = "L'idée est déjà au niveau maximal." });
 
         idea.Level = (IdeaLevel)((int)idea.Level + 1);
+        idea.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Ok(new IdeaSummaryDto(
+            idea.Id, idea.Title, idea.Content,
+            (int)idea.Level, idea.Status.ToString(), idea.Domain.ToString().ToLower(),
+            idea.Votes.Any() ? idea.Votes.Average(x => x.Score) : 0,
+            idea.Votes.Count, idea.CreatedAt, idea.Author.DisplayName, idea.BranchId));
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<IdeaSummaryDto>> Update(Guid id, UpdateIdeaRequest request)
+    {
+        var idea = await db.Ideas
+            .Include(i => i.Votes).Include(i => i.Author)
+            .FirstOrDefaultAsync(i => i.Id == id);
+        if (idea is null) return NotFound();
+
+        if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 200)
+            return BadRequest(new { error = "Le titre est requis (max 200 caractères)." });
+        if (string.IsNullOrWhiteSpace(request.Content) || request.Content.Length > 2000)
+            return BadRequest(new { error = "Le contenu est requis (max 2000 caractères)." });
+
+        idea.Title   = request.Title.Trim();
+        idea.Content = request.Content.Trim();
         idea.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 

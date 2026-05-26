@@ -3,16 +3,22 @@ import { useTree } from '../hooks/useTree';
 import TreeCanvas from '../components/tree/TreeCanvas';
 import Sidebar from '../components/sidebar/Sidebar';
 import CreateIdeaModal from '../components/modals/CreateIdeaModal';
-import type { Domain } from '../types';
+import type { Domain, IdeaNode } from '../types';
 
 const Home = () => {
   const {
     tree, loading, error,
     voteIdea, addArgument, addAmendment, createIdea, promoteIdea,
-    createBranch, createTrunkValue, deleteTrunkValue, deleteIdea,
+    updateIdea, deleteIdea,
+    createBranch, updateBranch,
+    createTrunkValue, updateTrunkValue, deleteTrunkValue,
+    updateArgument, deleteArgument,
+    updateAmendment, deleteAmendment,
   } = useTree();
+
   const [createBranchId, setCreateBranchId] = useState<string | undefined>(undefined);
   const [showCreate, setShowCreate] = useState(false);
+  const [searchIdeaId, setSearchIdeaId] = useState<string | null>(null);
 
   const handleRequestCreate = (branchId?: string) => {
     setCreateBranchId(branchId);
@@ -23,6 +29,10 @@ const Home = () => {
     await createIdea(title, content, domain, branchId);
   };
 
+  const handleSelectFromSearch = (idea: IdeaNode) => {
+    setSearchIdeaId(idea.id);
+  };
+
   if (loading) return (
     <div className="loading">
       <div className="loading-pulse" />
@@ -31,9 +41,7 @@ const Home = () => {
   );
 
   if (error) return (
-    <div className="error">
-      <p>{error}</p>
-    </div>
+    <div className="error"><p>{error}</p></div>
   );
 
   return (
@@ -42,8 +50,11 @@ const Home = () => {
         branches={tree?.branches ?? []}
         ideas={tree?.ideas ?? []}
         trunkValues={tree?.trunkValues ?? []}
+        onSelectIdea={handleSelectFromSearch}
         onCreateBranch={createBranch}
+        onUpdateBranch={updateBranch}
         onCreateTrunkValue={createTrunkValue}
+        onUpdateTrunkValue={updateTrunkValue}
         onDeleteTrunkValue={deleteTrunkValue}
       />
 
@@ -56,6 +67,13 @@ const Home = () => {
           onPromote={promoteIdea}
           onRequestCreate={handleRequestCreate}
           onDeleteIdea={deleteIdea}
+          onUpdateIdea={updateIdea}
+          onUpdateArgument={updateArgument}
+          onDeleteArgument={deleteArgument}
+          onUpdateAmendment={updateAmendment}
+          onDeleteAmendment={deleteAmendment}
+          requestOpenIdeaId={searchIdeaId}
+          onIdeaOpened={() => setSearchIdeaId(null)}
         />
       </main>
 

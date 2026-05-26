@@ -40,6 +40,23 @@ public class TrunkValuesController(AppDbContext db) : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<TrunkValueDto>> Update(Guid id, CreateTrunkValueRequest request)
+    {
+        var value = await db.TrunkValues.FindAsync(id);
+        if (value is null) return NotFound();
+
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 100)
+            return BadRequest(new { error = "Le nom est requis (max 100 caractères)." });
+
+        value.Name        = request.Name.Trim();
+        value.Description = request.Description.Trim();
+        await db.SaveChangesAsync();
+
+        return Ok(new TrunkValueDto(value.Id, value.Name, value.Description));
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
