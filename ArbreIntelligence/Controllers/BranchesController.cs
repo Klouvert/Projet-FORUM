@@ -57,6 +57,18 @@ public class BranchesController(AppDbContext db) : ControllerBase
         return Ok(new BranchDto(branch.Id, branch.Name, branch.Description, ideaCount, branch.CreatedAt));
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var branch = await db.Branches.FindAsync(id);
+        if (branch is null) return NotFound();
+
+        db.Branches.Remove(branch);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     private Guid? GetUserId()
     {
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier);

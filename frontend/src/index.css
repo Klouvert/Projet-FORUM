@@ -1,14 +1,14 @@
 /* ─── Variables ─────────────────────────────────────────────── */
 :root {
-  --bg-deep:      #0d1117;
-  --bg-panel:     #131a27;
-  --bg-card:      #1a2338;
-  --border:       #1e3050;
-  --border-hover: #2e4a7a;
+  --bg-deep:      #f5f0e8;
+  --bg-panel:     #ede8e0;
+  --bg-card:      #faf8f4;
+  --border:       #d4c8b4;
+  --border-hover: #a09078;
 
-  --text-primary:   #e8ead6;
-  --text-secondary: #8a9ab0;
-  --text-muted:     #4a5a70;
+  --text-primary:   #2a1e10;
+  --text-secondary: #5a4830;
+  --text-muted:     #8a7060;
 
   /* Palette naturelle */
   --trunk:       #6b4c2a;
@@ -32,8 +32,8 @@
   --radius-md: 10px;
   --radius-lg: 16px;
 
-  --shadow-panel: 0 2px 16px rgba(0,0,0,0.4);
-  --shadow-modal: 0 8px 40px rgba(0,0,0,0.6);
+  --shadow-panel: 0 2px 16px rgba(0,0,0,0.1);
+  --shadow-modal: 0 8px 40px rgba(0,0,0,0.2);
 }
 
 /* ─── Reset ─────────────────────────────────────────────────── */

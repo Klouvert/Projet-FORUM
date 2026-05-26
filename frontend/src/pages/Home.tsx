@@ -10,7 +10,7 @@ const Home = () => {
     tree, loading, error,
     voteIdea, addArgument, addAmendment, createIdea, promoteIdea,
     updateIdea, deleteIdea,
-    createBranch, updateBranch,
+    createBranch, updateBranch, deleteBranch,
     createTrunkValue, updateTrunkValue, deleteTrunkValue,
     updateArgument, deleteArgument,
     updateAmendment, deleteAmendment,
@@ -53,6 +53,7 @@ const Home = () => {
         onSelectIdea={handleSelectFromSearch}
         onCreateBranch={createBranch}
         onUpdateBranch={updateBranch}
+        onDeleteBranch={deleteBranch}
         onCreateTrunkValue={createTrunkValue}
         onUpdateTrunkValue={updateTrunkValue}
         onDeleteTrunkValue={deleteTrunkValue}

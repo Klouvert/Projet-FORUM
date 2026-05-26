@@ -45,8 +45,8 @@ type NodeStage = 'bud' | 'flower' | 'fruit' | 'leaf';
 
 const NODE_SPACING    = 52;
 const FIRST_NODE_DIST = 50; /* assez loin du tronc pour éviter le chevauchement */
-const TIP_EXTRA       = 38;
-const TRUNK_H         = 260;
+const TIP_EXTRA       = 32; /* = FIRST_NODE_DIST - 18, so gap last-node→"+" ≈ 50 */
+const TRUNK_H_MIN     = 260;
 
 /* Ordre d'avancement : Feuille (plus mature) → Bourgeon (moins mature) */
 const STAGE_ORDER: Record<string, number> = { leaf: 0, fruit: 1, flower: 2, bud: 3 };
@@ -113,8 +113,8 @@ function appendNodeShape(
   }
 }
 
-function trunkPath(cx: number, cy: number) {
-  const bw = 28, tw = 10, h = TRUNK_H;
+function trunkPath(cx: number, cy: number, h: number) {
+  const bw = 28, tw = 10;
   return [
     `M ${cx - bw} ${cy}`,
     `C ${cx - bw} ${cy - h * 0.3}, ${cx - tw} ${cy - h * 0.5}, ${cx - tw} ${cy - h}`,
@@ -208,10 +208,26 @@ const TreeCanvas = ({
     svg.selectAll('*').remove();
 
     const defs = svg.append('defs');
+
+    /* Tronc */
     const trunkGrad = defs.append('linearGradient').attr('id', 'trunk-grad')
       .attr('x1', '0%').attr('y1', '100%').attr('x2', '0%').attr('y2', '0%');
     trunkGrad.append('stop').attr('offset', '0%').attr('stop-color', '#3b2510');
     trunkGrad.append('stop').attr('offset', '100%').attr('stop-color', '#7a5c38');
+
+    /* Ciel — du haut (bleu profond) vers la base du tronc (bleu horizon clair) */
+    const skyGrad = defs.append('linearGradient').attr('id', 'sky-grad')
+      .attr('gradientUnits', 'userSpaceOnUse')
+      .attr('x1', '0').attr('y1', '0').attr('x2', '0').attr('y2', String(cy));
+    skyGrad.append('stop').attr('offset', '0%').attr('stop-color', '#6bb4d4');
+    skyGrad.append('stop').attr('offset', '100%').attr('stop-color', '#c9e9f7');
+
+    /* Sol — de la base du tronc (vert herbe) vers le bas (vert profond) */
+    const groundGrad = defs.append('linearGradient').attr('id', 'ground-grad')
+      .attr('gradientUnits', 'userSpaceOnUse')
+      .attr('x1', '0').attr('y1', String(cy)).attr('x2', '0').attr('y2', String(height));
+    groundGrad.append('stop').attr('offset', '0%').attr('stop-color', '#8dc97c');
+    groundGrad.append('stop').attr('offset', '100%').attr('stop-color', '#4a7a2e');
 
     const g = svg.append('g');
     svg.call(
@@ -220,36 +236,59 @@ const TreeCanvas = ({
         .on('zoom', (e) => g.attr('transform', e.transform))
     );
 
+    /* Arrière-plan adaptatif dans le groupe zoomable — suit le zoom et le pan */
+    g.append('rect').attr('x', -100000).attr('y', -100000)
+      .attr('width', 200000).attr('height', 100000 + cy)
+      .attr('fill', 'url(#sky-grad)');
+    g.append('rect').attr('x', -100000).attr('y', cy)
+      .attr('width', 200000).attr('height', 100000)
+      .attr('fill', 'url(#ground-grad)');
+
     /* ── Socle ───────────────────────────────────────────────── */
     g.append('ellipse').attr('cx', cx).attr('cy', cy + 16)
       .attr('rx', 120).attr('ry', 20)
-      .attr('fill', '#1e0f04').attr('opacity', 0.9);
+      .attr('fill', '#3b2510').attr('opacity', 0.75);
 
-    /* graines dans le socle */
+    /* ── Racines dans le sol ─────────────────────────────────── */
     const seeds = tree.trunkValues;
+    const rootDepth = 62;
     seeds.forEach((value, i) => {
-      const spacing = Math.min(seeds.length * 32, 180) / Math.max(seeds.length - 1, 1);
-      const sx = cx + (i - (seeds.length - 1) / 2) * spacing;
-      const sy = cy + 16;
-      const sr = 5;
-      g.append('circle').attr('cx', sx).attr('cy', sy).attr('r', sr)
+      const spacing = Math.min(seeds.length * 48, 220) / Math.max(seeds.length - 1, 1);
+      const rx = cx + (i - (seeds.length - 1) / 2) * spacing;
+      const ry = cy + rootDepth;
+      /* courbe bézier : part du pied du tronc, s'éloigne latéralement */
+      g.append('path')
+        .attr('d', `M ${cx} ${cy + 8} C ${cx} ${cy + 35}, ${rx} ${cy + 35}, ${rx} ${ry}`)
+        .attr('stroke', '#5c3818').attr('stroke-width', 2.5)
+        .attr('fill', 'none').attr('opacity', 0.75).attr('stroke-linecap', 'round');
+      /* nœud terminal de la racine */
+      g.append('circle').attr('cx', rx).attr('cy', ry).attr('r', 3.5)
         .attr('fill', '#a5d6a7').attr('opacity', 0.9);
-      g.append('text').attr('x', sx).attr('y', sy + sr + 12)
-        .attr('text-anchor', 'middle').attr('fill', '#6a8a6a')
-        .attr('font-size', '9px').text(value.name);
+      /* nom de la valeur fondatrice */
+      const anchor = Math.abs(rx - cx) < 6 ? 'middle' : rx > cx ? 'start' : 'end';
+      const lx = rx + (Math.abs(rx - cx) < 6 ? 0 : rx > cx ? 6 : -6);
+      g.append('text').attr('x', lx).attr('y', ry + 14)
+        .attr('text-anchor', anchor)
+        .attr('fill', '#d4f0d4').attr('font-size', '10px').attr('font-weight', '500')
+        .attr('stroke', 'rgba(20,50,10,0.75)').attr('stroke-width', '2.5').attr('paint-order', 'stroke fill')
+        .text(value.name);
     });
 
     /* bouton + graine */
     appendAddButton(g, cx + 100, cy + 16, () => onRequestCreate(undefined));
 
-    /* ── Tronc ───────────────────────────────────────────────── */
-    g.append('path').attr('d', trunkPath(cx, cy))
-      .attr('fill', 'url(#trunk-grad)')
-      .attr('filter', 'drop-shadow(0 4px 10px rgba(0,0,0,0.6))');
-
-    /* ── Branches alternées ──────────────────────────────────── */
+    /* ── Layout : tronc grandit pour éviter les chevauchements ─ */
     const branchCount = tree.branches.length;
     const totalLevels = Math.ceil(branchCount / 2);
+    /* 80 px minimum entre niveaux de branches (zone = 70 % du tronc) */
+    const trunkH = Math.max(TRUNK_H_MIN, Math.round(Math.max(0, totalLevels - 1) * 80 / 0.70));
+
+    /* ── Tronc ───────────────────────────────────────────────── */
+    g.append('path').attr('d', trunkPath(cx, cy, trunkH))
+      .attr('fill', 'url(#trunk-grad)')
+      .attr('filter', 'drop-shadow(0 4px 10px rgba(0,0,0,0.28))');
+
+    /* ── Branches alternées ──────────────────────────────────── */
 
     tree.branches.forEach((branch, i) => {
       const side = i % 2 === 0 ? 1 : -1;
@@ -257,7 +296,7 @@ const TreeCanvas = ({
       const levelFrac  = totalLevels > 1 ? levelIndex / (totalLevels - 1) : 0.5;
 
       /* point d'attache sur le tronc */
-      const attachY = cy - TRUNK_H * (0.20 + levelFrac * 0.70);
+      const attachY = cy - trunkH * (0.20 + levelFrac * 0.70);
       const attachX = cx + side * 10;
 
       /* angle : bas = 58°, haut = 26° */
@@ -266,9 +305,9 @@ const TreeCanvas = ({
       const unitX      = Math.sin(angle);
       const unitY      = -Math.cos(angle);
 
-      /* longueur = espace nécessaire pour tous les nœuds */
+      /* longueur = dernier nœud + même queue que tête (FIRST_NODE_DIST) */
       const ideaCount    = tree.ideas.filter(id => id.branchId === branch.id).length;
-      const branchLength = Math.max(110, FIRST_NODE_DIST + ideaCount * NODE_SPACING + TIP_EXTRA);
+      const branchLength = Math.max(80, FIRST_NODE_DIST + Math.max(0, ideaCount - 1) * NODE_SPACING + TIP_EXTRA);
 
       const bx = attachX + unitX * branchLength;
       const by = attachY + unitY * branchLength;
@@ -292,8 +331,10 @@ const TreeCanvas = ({
       const labelY = attachY - 5;
       g.append('text').attr('x', labelX).attr('y', labelY)
         .attr('text-anchor', labelAnchor)
-        .attr('fill', '#9aabb8').attr('font-size', '11px').attr('font-weight', '500')
-        .attr('letter-spacing', '0.3px').text(branch.name);
+        .attr('fill', '#5a4030').attr('font-size', '11px').attr('font-weight', '500')
+        .attr('letter-spacing', '0.3px')
+        .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
+        .text(branch.name);
 
       /* bouton + à l'extrémité */
       appendAddButton(g, bx + unitX * 18, by + unitY * 18, () => onRequestCreate(branch.id));
@@ -307,17 +348,17 @@ const TreeCanvas = ({
           return STAGE_ORDER[sa] - STAGE_ORDER[sb];
         });
 
-      /* Perpendiculaire CCW : labels alternent au-dessus / en-dessous de la branche */
-      const perpX = -unitY;
-      const perpY =  unitX;
+      const pathNode = pathEl.node() as SVGPathElement;
 
       branchIdeas.forEach((idea: IdeaNode, j: number) => {
         const dist = FIRST_NODE_DIST + j * NODE_SPACING;
         const alt  = j % 2 === 0 ? -1 : 1;
 
-        /* nœud collé sur la branche */
-        const nx = attachX + unitX * dist;
-        const ny = attachY + unitY * dist;
+        /* nœud collé sur la courbe bézier réelle */
+        const t  = dist / branchLength;
+        const pt = pathNode.getPointAtLength(t * totalLen);
+        const nx = pt.x;
+        const ny = pt.y;
 
         const stage      = (LEVEL_TO_STAGE[idea.level] ?? 'bud') as NodeStage;
         const baseColor  = DOMAIN_COLORS[idea.domain] ?? STAGE_COLORS[stage];
@@ -332,11 +373,19 @@ const TreeCanvas = ({
 
         appendNodeShape(nodeG as never, stage, radius, baseColor, isSelected);
 
-        /* label perpendiculaire à la branche, alternance haut/bas */
-        const labelGap  = radius + 6;
-        const lx        = alt * perpX * labelGap;
-        const ly        = alt * perpY * labelGap;
-        const textAnchor = lx > 0.5 ? 'start' : lx < -0.5 ? 'end' : 'middle';
+        /* Perpendiculaire locale à la tangente bézier — le label ne croise pas la branche */
+        const eps  = 1;
+        const ptA  = pathNode.getPointAtLength(Math.max(0,          t * totalLen - eps));
+        const ptB  = pathNode.getPointAtLength(Math.min(totalLen,   t * totalLen + eps));
+        const tanX = ptB.x - ptA.x, tanY = ptB.y - ptA.y;
+        const tanLen = Math.sqrt(tanX * tanX + tanY * tanY) || 1;
+        const lpX  = -tanY / tanLen;   /* perpendiculaire locale */
+        const lpY  =  tanX / tanLen;
+
+        const labelGap   = radius + 6;
+        const lx         = alt * lpX * labelGap;
+        const ly         = alt * lpY * labelGap;
+        const textAnchor = Math.abs(lx) < 3 ? 'middle' : lx > 0 ? 'start' : 'end';
         const [line1, line2] = wrapTitle(idea.title);
         const lineH = 9;
         const yBase = ly + (alt < 0 ? -(line2 ? lineH : 2) : 2);
@@ -344,13 +393,15 @@ const TreeCanvas = ({
         nodeG.append('text')
           .attr('x', lx).attr('y', yBase)
           .attr('text-anchor', textAnchor)
-          .attr('fill', '#8a9ab0').attr('font-size', '8px')
+          .attr('fill', '#5a4030').attr('font-size', '8px')
+          .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
           .text(line1);
         if (line2) {
           nodeG.append('text')
             .attr('x', lx).attr('y', yBase + lineH)
             .attr('text-anchor', textAnchor)
-            .attr('fill', '#8a9ab0').attr('font-size', '8px')
+            .attr('fill', '#5a4030').attr('font-size', '8px')
+            .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
             .text(line2);
         }
 
@@ -371,7 +422,7 @@ const TreeCanvas = ({
 
     /* ── Idées sans branche (au-dessus du tronc) ─────────────── */
     const rootIdeas = tree.ideas.filter(idea => idea.branchId === null);
-    const trunkTopY = cy - TRUNK_H;
+    const trunkTopY = cy - trunkH;
     rootIdeas.forEach((idea, j) => {
       const nx = cx + (j - (rootIdeas.length - 1) / 2) * 52;
       const ny = trunkTopY - 26 - j * 28;
@@ -397,11 +448,13 @@ const TreeCanvas = ({
       const textAnchor = nx < cx ? 'end' : 'start';
       const [rl1, rl2] = wrapTitle(idea.title);
       nodeG.append('text').attr('x', labelX).attr('y', rl2 ? -4 : 3)
-        .attr('text-anchor', textAnchor).attr('fill', '#8a9ab0').attr('font-size', '8px')
+        .attr('text-anchor', textAnchor).attr('fill', '#5a4030').attr('font-size', '8px')
+        .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
         .text(rl1);
       if (rl2) {
         nodeG.append('text').attr('x', labelX).attr('y', 5)
-          .attr('text-anchor', textAnchor).attr('fill', '#8a9ab0').attr('font-size', '8px')
+          .attr('text-anchor', textAnchor).attr('fill', '#5a4030').attr('font-size', '8px')
+          .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
           .text(rl2);
       }
 
@@ -424,7 +477,7 @@ const TreeCanvas = ({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <svg ref={svgRef} width="100%" height="100%" style={{ background: 'var(--bg-deep)' }} />
+      <svg ref={svgRef} width="100%" height="100%" />
 
       {loadingDetail && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', zIndex: 50 }}>

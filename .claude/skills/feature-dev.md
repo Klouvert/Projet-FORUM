@@ -32,6 +32,24 @@ Exemples :
 
 Proposer un commit après chaque étape fonctionnelle. Ne pas enchaîner deux tâches sans checkpoint git.
 
+## Icônes — convention obligatoire
+
+Utiliser **uniquement des icônes Lucide SVG** (`lucide-react`) — jamais d'emojis ni de caractères texte (`×`, `🗑`, etc.) pour les boutons d'action.
+
+Icônes standard :
+- Modifier : `<Pencil size={13} />`
+- Supprimer (principal, 28×28) : `<Trash2 size={14} />`
+- Supprimer (inline dans liste, 24×24) : `<Trash2 size={13} />`
+
+Tailles des boutons :
+- Bouton principal (header modal, sidebar) : `width: '28px', height: '28px'`
+- Bouton inline (dans liste d'items) : `width: '24px', height: '24px'`
+- Toujours : `padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'`
+
+Couleurs :
+- Modifier : `background: 'var(--bg-card)'`, `border: '1px solid var(--border)'`, `color: 'var(--text-secondary)'`
+- Supprimer : `background: 'rgba(229,57,53,0.12)'`, `border: '1px solid #e53935'`, `color: '#e57373'`
+
 ## Validation entre phases
 
 Ne pas démarrer la phase suivante sans confirmation explicite de l'utilisateur.

@@ -80,6 +80,11 @@ export const useTree = () => {
     refreshTree();
   };
 
+  const deleteBranch = async (id: string) => {
+    await api.delete(`/branches/${id}`);
+    refreshTree();
+  };
+
   const updateIdea = async (id: string, title: string, content: string) => {
     await api.put(`/ideas/${id}`, { title, content });
     refreshTree();
@@ -114,7 +119,7 @@ export const useTree = () => {
     tree, loading, error,
     voteIdea, voteArgument, addArgument, addAmendment,
     createIdea, promoteIdea, updateIdea, deleteIdea,
-    createBranch, updateBranch,
+    createBranch, updateBranch, deleteBranch,
     createTrunkValue, updateTrunkValue, deleteTrunkValue,
     updateArgument, deleteArgument,
     updateAmendment, deleteAmendment,

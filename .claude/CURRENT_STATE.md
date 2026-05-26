@@ -4,10 +4,10 @@ _Mettre à jour en fin de chaque session._
 
 ## Sprint courant
 
-**Phase 3 — Déploiement Azure** (non démarrée)
+**Polissage UI — thème clair + layout visuel** (session 2026-05-26)
 
-Phase 2 UI complète et commitée (`920f729 feat: phase 2 — UI visuelle complète de l'arbre mindmap`).
-Validation de Phase 2 par l'utilisateur requise avant démarrage Phase 3.
+Phase 2 UI commitée, thème clair + dégradé ciel/sol appliqués et validés par l'utilisateur.
+Phase 3 (Azure) non démarrée — attente confirmation.
 
 ## Dernier commit
 
@@ -17,19 +17,18 @@ Validation de Phase 2 par l'utilisateur requise avant démarrage Phase 3.
 
 ## Fichiers modifiés (non commités)
 
-Aucun — working tree propre.
+- `frontend/src/index.css` — palette tons clairs (fond crème, texte brun)
+- `frontend/src/components/tree/TreeCanvas.tsx` — dégradé ciel/sol adaptatif dans `g`, branche plus courte (TIP_EXTRA=32, formule corrigée), nœuds sur courbe bézier, couleurs D3 claires
+- `frontend/src/components/tree/TreeLegend.tsx` — fond crème semi-transparent
+- `frontend/src/components/ui/VoteSlider.tsx` — contraste texte bouton voter (contrastColor)
+- `frontend/src/components/sidebar/Sidebar.tsx` — couleurs hardcodées → variables CSS
+- `frontend/src/components/sidebar/SearchPanel.tsx` — même style que Racines, variables CSS
 
 ## Problèmes ouverts
 
-Aucun connu.
+- Modales (BourGeonModal, FleurModal, FruitModal, FeuilleModal) encore en thème sombre hardcodé — une autre session les modifie (contenu admin), à harmoniser ensuite.
 
 ## Prochaine étape
 
-Valider Phase 2 visuellement (lancer l'app, vérifier le rendu mindmap).
-Puis confirmer le démarrage de Phase 3 (Azure) ou Phase 4 (contrib).
-
-## Contexte session courante
-
-2026-05-26 — Mise en place de la structure de documentation `.claude/` :
-`PROJECT.md`, `CURRENT_STATE.md`, `SKILLS/`, `CLAUDE.md` racine.
-`SKILL.md` (ancien) supprimé, `DESIGN_TREE_MINDMAP.md` déplacé vers `SKILLS/phase2-mindmap.md`.
+Commit des changements visuels actuels.
+Puis confirmer Phase 3 (Azure) ou continuer le polissage (modales thème clair).

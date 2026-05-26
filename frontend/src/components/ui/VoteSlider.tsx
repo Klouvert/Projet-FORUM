@@ -6,6 +6,14 @@ interface VoteSliderProps {
   disabled?: boolean;
 }
 
+function contrastColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.4 ? '#212121' : '#ffffff';
+}
+
 const SCORE_COLORS: Record<number, string> = {
   1: '#b71c1c', 2: '#c62828', 3: '#e53935',
   4: '#fb8c00', 5: '#fdd835',
@@ -72,7 +80,7 @@ const VoteSlider = ({ onVote, currentScore, disabled = false }: VoteSliderProps)
           width: '100%',
           padding: '8px',
           background: voted ? '#2e7d32' : voteError ? '#c62828' : SCORE_COLORS[score],
-          color: '#fff',
+          color: contrastColor(voted ? '#2e7d32' : voteError ? '#c62828' : SCORE_COLORS[score]),
           border: 'none',
           borderRadius: '6px',
           cursor: busy ? 'not-allowed' : 'pointer',

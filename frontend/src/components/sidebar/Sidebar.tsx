@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, GitBranch, Search, Leaf, Shield } from 'lucide-react';
+import { LogOut, GitBranch, Search, Leaf, Shield, Pencil, Trash2 } from 'lucide-react';
 import type { Branch, IdeaNode, TrunkValue } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import SearchPanel from './SearchPanel';
@@ -11,6 +11,7 @@ interface SidebarProps {
   onSelectIdea: (idea: IdeaNode) => void;
   onCreateBranch: (name: string, description?: string) => Promise<void>;
   onUpdateBranch: (id: string, name: string, description?: string) => Promise<void>;
+  onDeleteBranch: (id: string) => Promise<void>;
   onCreateTrunkValue: (name: string, description: string) => Promise<void>;
   onUpdateTrunkValue: (id: string, name: string, description: string) => Promise<void>;
   onDeleteTrunkValue: (id: string) => Promise<void>;
@@ -20,7 +21,7 @@ type Tab = 'branches' | 'recherche' | 'racines';
 
 const Sidebar = ({
   branches, ideas, trunkValues, onSelectIdea,
-  onCreateBranch, onUpdateBranch,
+  onCreateBranch, onUpdateBranch, onDeleteBranch,
   onCreateTrunkValue, onUpdateTrunkValue, onDeleteTrunkValue,
 }: SidebarProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('branches');
@@ -101,16 +102,16 @@ const Sidebar = ({
 
   return (
     <aside style={{
-      width: '280px', height: '100vh', background: '#16213e',
-      borderRight: '1px solid #0f3460', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      width: '280px', height: '100vh', background: 'var(--bg-panel)',
+      borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
     }}>
 
       <div style={{
-        padding: '12px 16px', borderBottom: '1px solid #0f3460',
+        padding: '12px 16px', borderBottom: '1px solid var(--border)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <span style={{ fontSize: '13px', color: '#aaa', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          🌳 <strong style={{ color: '#e0e0e0' }}>{user?.displayName}</strong>
+        <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          🌳 <strong style={{ color: 'var(--text-primary)' }}>{user?.displayName}</strong>
           {isAdmin && (
             <span style={{ fontSize: '9px', background: '#7e57c2', color: '#fff', borderRadius: '4px', padding: '1px 5px', letterSpacing: '0.4px' }}>ADMIN</span>
           )}
@@ -158,27 +159,31 @@ const Sidebar = ({
                         onChange={(e) => setEditBranchDesc(e.target.value)} style={inputStyle} />
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={handleUpdateBranch} disabled={editBranchSaving || !editBranchName.trim()}
-                          style={{ ...actionBtnStyle, background: '#0f3460', flex: 1 }}>
+                          style={{ ...actionBtnStyle, background: 'var(--accent)', flex: 1 }}>
                           {editBranchSaving ? '...' : 'Enregistrer'}
                         </button>
                         <button onClick={() => setEditBranchId(null)}
-                          style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid #0f3460', color: '#888' }}>
+                          style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                           Annuler
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div style={{
-                      padding: '10px 12px', background: '#1a1a2e', borderRadius: '8px',
-                      fontSize: '14px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '10px 12px', background: 'var(--bg-card)', borderRadius: '8px',
+                      fontSize: '14px', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      border: '1px solid var(--border)',
                     }}>
                       <span>{branch.name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', color: '#888', background: '#0f3460', padding: '2px 8px', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--border)', padding: '2px 8px', borderRadius: '12px' }}>
                           {branch.ideaCount} idées
                         </span>
                         {isAdmin && (
-                          <button onClick={() => startEditBranch(branch)} title="Modifier" style={iconBtnStyle}>✏</button>
+                          <>
+                            <button onClick={() => startEditBranch(branch)} title="Modifier" style={editBtnStyle}><Pencil size={13} /></button>
+                            <button onClick={() => onDeleteBranch(branch.id)} title="Supprimer" style={deleteBtnStyle}><Trash2 size={14} /></button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -186,7 +191,7 @@ const Sidebar = ({
                 </li>
               ))}
               {branches.length === 0 && (
-                <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune branche</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune branche</p>
               )}
             </ul>
 
@@ -199,11 +204,11 @@ const Sidebar = ({
                     onChange={(e) => setBranchDesc(e.target.value)} style={inputStyle} />
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={handleCreateBranch} disabled={branchSaving || !branchName.trim()}
-                      style={{ ...actionBtnStyle, background: '#0f3460', flex: 1 }}>
+                      style={{ ...actionBtnStyle, background: 'var(--accent)', flex: 1 }}>
                       {branchSaving ? '...' : 'Créer'}
                     </button>
                     <button onClick={() => { setShowBranchForm(false); setBranchName(''); setBranchDesc(''); }}
-                      style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid #0f3460', color: '#888' }}>
+                      style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                       Annuler
                     </button>
                   </div>
@@ -237,24 +242,25 @@ const Sidebar = ({
                           {editValueSaving ? '...' : 'Enregistrer'}
                         </button>
                         <button onClick={() => setEditValueId(null)}
-                          style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid #0f3460', color: '#888' }}>
+                          style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                           Annuler
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div style={{
-                      padding: '10px 12px', background: '#1a1a2e', borderRadius: '8px',
+                      padding: '10px 12px', background: 'var(--bg-card)', borderRadius: '8px',
+                      border: '1px solid var(--border)',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
                     }}>
                       <div>
-                        <div style={{ fontSize: '13px', color: '#e0e0e0', fontWeight: 500 }}>{tv.name}</div>
-                        <div style={{ fontSize: '11px', color: '#888', marginTop: '3px', lineHeight: 1.4 }}>{tv.description}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{tv.name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.4 }}>{tv.description}</div>
                       </div>
                       {isAdmin && (
                         <div style={{ display: 'flex', gap: '4px', flexShrink: 0, paddingLeft: '8px' }}>
-                          <button onClick={() => startEditValue(tv)} title="Modifier" style={iconBtnStyle}>✏</button>
-                          <button onClick={() => onDeleteTrunkValue(tv.id)} title="Supprimer" style={{ ...iconBtnStyle, color: '#e57373' }}>×</button>
+                          <button onClick={() => startEditValue(tv)} title="Modifier" style={editBtnStyle}><Pencil size={13} /></button>
+                          <button onClick={() => onDeleteTrunkValue(tv.id)} title="Supprimer" style={deleteBtnStyle}><Trash2 size={14} /></button>
                         </div>
                       )}
                     </div>
@@ -262,7 +268,7 @@ const Sidebar = ({
                 </li>
               ))}
               {trunkValues.length === 0 && (
-                <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune valeur fondatrice</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune valeur fondatrice</p>
               )}
             </ul>
 
@@ -280,7 +286,7 @@ const Sidebar = ({
                       {valueSaving ? '...' : 'Ajouter'}
                     </button>
                     <button onClick={() => { setShowValueForm(false); setValueName(''); setValueDesc(''); }}
-                      style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid #0f3460', color: '#888' }}>
+                      style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                       Annuler
                     </button>
                   </div>
@@ -297,22 +303,31 @@ const Sidebar = ({
 };
 
 const inputStyle: React.CSSProperties = {
-  padding: '8px 10px', background: '#16213e', border: '1px solid #0f3460',
-  borderRadius: '6px', color: '#e0e0e0', fontSize: '13px', width: '100%', boxSizing: 'border-box',
+  padding: '8px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)',
+  borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px', width: '100%', boxSizing: 'border-box',
 };
 const formBoxStyle: React.CSSProperties = {
-  background: '#1a1a2e', border: '1px solid #0f3460', borderRadius: '8px',
+  background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '8px',
   padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px',
 };
 const actionBtnStyle: React.CSSProperties = {
-  padding: '7px 12px', border: 'none', borderRadius: '6px', color: '#e0e0e0', fontSize: '13px', cursor: 'pointer',
+  padding: '7px 12px', border: 'none', borderRadius: '6px', color: '#ffffff', fontSize: '13px', cursor: 'pointer',
 };
 const dashedBtnStyle: React.CSSProperties = {
-  width: '100%', padding: '9px', background: 'transparent', border: '1px dashed #0f3460',
-  borderRadius: '8px', color: '#888', fontSize: '13px', cursor: 'pointer',
+  width: '100%', padding: '9px', background: 'transparent', border: '1px dashed var(--border)',
+  borderRadius: '8px', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer',
 };
 const iconBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '14px', padding: '2px 4px',
+  background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: '2px 4px',
+  display: 'flex', alignItems: 'center',
+};
+const editBtnStyle: React.CSSProperties = {
+  width: '28px', height: '28px', background: 'var(--bg-panel)', border: '1px solid var(--border)', borderRadius: '6px',
+  color: 'var(--text-secondary)', cursor: 'pointer', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+};
+const deleteBtnStyle: React.CSSProperties = {
+  width: '28px', height: '28px', background: 'rgba(229,57,53,0.12)', border: '1px solid #e53935', borderRadius: '6px',
+  color: '#e57373', cursor: 'pointer', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 };
 
 export default Sidebar;

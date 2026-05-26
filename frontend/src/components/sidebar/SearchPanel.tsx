@@ -60,7 +60,7 @@ const SearchPanel = ({ ideas, onSelectIdea }: SearchPanelProps) => {
       </div>
 
       <div style={{ marginTop: '4px' }}>
-        <p style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
           {results.length} résultat{results.length !== 1 ? 's' : ''}
         </p>
         <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -71,22 +71,23 @@ const SearchPanel = ({ ideas, onSelectIdea }: SearchPanelProps) => {
                 key={idea.id}
                 onClick={() => onSelectIdea(idea)}
                 style={{
-                  padding: '8px 10px', background: '#1a1a2e', borderRadius: '6px',
-                  fontSize: '13px', color: '#ddd', cursor: 'pointer',
-                  border: '1px solid transparent', transition: 'border-color 0.15s',
+                  padding: '10px 12px', background: 'var(--bg-card)', borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer',
+                  transition: 'border-color 0.15s',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#0f3460')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-hover)')}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
               >
                 {idea.title}
-                <span style={{ display: 'block', fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                   {STAGE_LABELS[stageKey]} · {DOMAIN_LABELS[idea.domain]}
                 </span>
               </li>
             );
           })}
           {results.length === 0 && keyword && (
-            <p style={{ color: '#666', fontSize: '13px' }}>Aucun résultat.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Aucun résultat.</p>
           )}
         </ul>
       </div>
@@ -95,12 +96,12 @@ const SearchPanel = ({ ideas, onSelectIdea }: SearchPanelProps) => {
 };
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '11px', color: '#888', marginBottom: '4px',
+  display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px',
   textTransform: 'uppercase', letterSpacing: '0.5px',
 };
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 10px', background: '#1a1a2e',
-  border: '1px solid #0f3460', borderRadius: '6px', color: '#e0e0e0', fontSize: '13px',
+  width: '100%', padding: '8px 10px', background: 'var(--bg-card)',
+  border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px',
 };
 
 export default SearchPanel;
