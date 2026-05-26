@@ -38,6 +38,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: ArbreIntelligence/**/*.csproj
 
       - name: Publish backend (inclut wwwroot/)
         run: |
