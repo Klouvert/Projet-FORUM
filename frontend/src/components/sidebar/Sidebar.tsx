@@ -330,7 +330,7 @@ const Sidebar = ({
         <div style={{
           position: 'fixed', top: 0, left: '280px', height: '100vh', width: '460px',
           background: 'var(--bg-panel)', borderRight: '1px solid var(--border)',
-          display: 'flex', flexDirection: 'column', zIndex: 9,
+          display: 'flex', flexDirection: 'column', zIndex: 20,
           boxShadow: '4px 0 20px rgba(0,0,0,0.08)',
         }}>
           {/* Header */}
