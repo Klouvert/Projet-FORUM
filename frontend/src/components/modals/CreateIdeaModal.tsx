@@ -12,13 +12,14 @@ interface CreateIdeaModalProps {
   branches: Branch[];
   onClose: () => void;
   onSubmit: (title: string, content: string, domain: Domain, branchId?: string) => Promise<void>;
+  defaultBranchId?: string;
 }
 
-const CreateIdeaModal = ({ branches, onClose, onSubmit }: CreateIdeaModalProps) => {
+const CreateIdeaModal = ({ branches, onClose, onSubmit, defaultBranchId }: CreateIdeaModalProps) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [domain, setDomain] = useState<Domain>('social');
-  const [branchId, setBranchId] = useState<string>('');
+  const [branchId, setBranchId] = useState<string>(defaultBranchId ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -38,7 +38,7 @@ const FleurModal = ({ idea, onClose, onVote, onAddAmendment, onPromote }: FleurM
 
   return (
     <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-animate" style={modalStyle} onClick={(e) => e.stopPropagation()}>
 
         <div style={headerStyle}>
           <div>
@@ -122,7 +122,7 @@ const FleurModal = ({ idea, onClose, onVote, onAddAmendment, onPromote }: FleurM
 };
 
 const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-const modalStyle: React.CSSProperties = { background: '#16213e', borderRadius: '12px', padding: '24px', width: '580px', maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto', color: '#e0e0e0' };
+const modalStyle: React.CSSProperties = { background: 'var(--bg-panel)', borderRadius: 'var(--radius-lg)', padding: '24px', width: '580px', maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto', color: 'var(--text-primary)', boxShadow: 'var(--shadow-modal)' };
 const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' };
 const badgeStyle: React.CSSProperties = { padding: '3px 10px', borderRadius: '12px', fontSize: '11px', color: '#fff' };
 const closeBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#888', fontSize: '18px', cursor: 'pointer' };

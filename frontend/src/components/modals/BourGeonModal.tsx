@@ -38,7 +38,7 @@ const BourGeonModal = ({ idea, onClose, onVote, onAddArgument, onPromote }: Bour
 
   return (
     <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-animate" style={modalStyle} onClick={(e) => e.stopPropagation()}>
 
         <div style={headerStyle}>
           <div>
@@ -169,14 +169,15 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const modalStyle: React.CSSProperties = {
-  background: '#16213e',
-  borderRadius: '12px',
+  background: 'var(--bg-panel)',
+  borderRadius: 'var(--radius-lg)',
   padding: '24px',
   width: '560px',
   maxWidth: '95vw',
   maxHeight: '85vh',
   overflowY: 'auto',
-  color: '#e0e0e0',
+  color: 'var(--text-primary)',
+  boxShadow: 'var(--shadow-modal)',
 };
 
 const headerStyle: React.CSSProperties = {

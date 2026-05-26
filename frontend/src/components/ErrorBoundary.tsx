@@ -1,13 +1,17 @@
 import { Component, type ReactNode } from 'react';
 
 interface Props { children: ReactNode; }
-interface State { hasError: boolean; }
+interface State { hasError: boolean; error: Error | null; }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, error: null };
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: unknown) {
+    console.error('[ErrorBoundary]', error, info);
   }
 
   render() {
@@ -22,8 +26,25 @@ export class ErrorBoundary extends Component<Props, State> {
           justifyContent: 'center',
           color: '#e0e0e0',
           gap: '16px',
+          padding: '24px',
         }}>
           <p style={{ fontSize: '16px', color: '#aaa' }}>Une erreur inattendue est survenue.</p>
+          {this.state.error && (
+            <pre style={{
+              background: '#0d1117',
+              border: '1px solid #e53935',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              fontSize: '12px',
+              color: '#ef9a9a',
+              maxWidth: '700px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+            }}>
+              {this.state.error.name}: {this.state.error.message}
+              {'\n'}{this.state.error.stack?.split('\n').slice(1, 5).join('\n')}
+            </pre>
+          )}
           <button
             onClick={() => window.location.reload()}
             style={{

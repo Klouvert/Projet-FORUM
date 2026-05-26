@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LogOut, GitBranch, Search, Leaf } from 'lucide-react';
 import type { Branch, IdeaNode } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import SearchPanel from './SearchPanel';
@@ -53,37 +54,47 @@ const Sidebar = ({ branches, ideas, onCreateBranch }: SidebarProps) => {
         <span style={{ fontSize: '13px', color: '#aaa' }}>
           🌳 <strong style={{ color: '#e0e0e0' }}>{user?.displayName}</strong>
         </span>
-        <button onClick={logout} style={{
+        <button onClick={logout} title="Déconnexion" style={{
           background: 'none',
-          border: '1px solid #0f3460',
-          borderRadius: '4px',
-          color: '#888',
-          fontSize: '11px',
-          padding: '3px 8px',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-sm)',
+          color: 'var(--text-muted)',
+          padding: '4px 7px',
           cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
         }}>
-          Déconnexion
+          <LogOut size={13} />
         </button>
       </div>
 
-      <div style={{ display: 'flex', borderBottom: '1px solid #0f3460' }}>
-        {(['branches', 'recherche', 'racines'] as Tab[]).map((tab) => (
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
+        {([
+          { id: 'branches',  Icon: GitBranch, label: 'Branches' },
+          { id: 'recherche', Icon: Search,    label: 'Recherche' },
+          { id: 'racines',   Icon: Leaf,      label: 'Racines'   },
+        ] as { id: Tab; Icon: React.FC<{ size: number }>; label: string }[]).map(({ id, Icon, label }) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={id}
+            onClick={() => setActiveTab(id)}
+            title={label}
             style={{
               flex: 1,
-              padding: '12px 4px',
-              background: activeTab === tab ? '#0f3460' : 'transparent',
-              color: activeTab === tab ? '#e0e0e0' : '#888',
+              padding: '11px 4px',
+              background: activeTab === id ? 'var(--border)' : 'transparent',
+              color: activeTab === id ? 'var(--text-primary)' : 'var(--text-muted)',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '12px',
-              textTransform: 'capitalize',
-              transition: 'all 0.2s',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              fontSize: '10px',
+              transition: 'color 0.15s',
             }}
           >
-            {tab}
+            <Icon size={15} />
+            {label}
           </button>
         ))}
       </div>

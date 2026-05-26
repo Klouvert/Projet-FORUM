@@ -7,7 +7,13 @@ import type { Domain } from '../types';
 
 const Home = () => {
   const { tree, loading, error, voteIdea, addArgument, addAmendment, createIdea, promoteIdea, createBranch } = useTree();
+  const [createBranchId, setCreateBranchId] = useState<string | undefined>(undefined);
   const [showCreate, setShowCreate] = useState(false);
+
+  const handleRequestCreate = (branchId?: string) => {
+    setCreateBranchId(branchId);
+    setShowCreate(true);
+  };
 
   const handleCreateIdea = async (title: string, content: string, domain: Domain, branchId?: string) => {
     await createIdea(title, content, domain, branchId);
@@ -15,6 +21,7 @@ const Home = () => {
 
   if (loading) return (
     <div className="loading">
+      <div className="loading-pulse" />
       <p>Chargement de l'arbre...</p>
     </div>
   );
@@ -40,37 +47,14 @@ const Home = () => {
           onAddArgument={addArgument}
           onAddAmendment={addAmendment}
           onPromote={promoteIdea}
+          onRequestCreate={handleRequestCreate}
         />
-
-        <button
-          onClick={() => setShowCreate(true)}
-          title="Proposer une idée"
-          style={{
-            position: 'absolute',
-            bottom: '28px',
-            right: '28px',
-            width: '52px',
-            height: '52px',
-            borderRadius: '50%',
-            background: '#9C27B0',
-            border: 'none',
-            color: '#fff',
-            fontSize: '26px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(156,39,176,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            lineHeight: 1,
-          }}
-        >
-          +
-        </button>
       </main>
 
       {showCreate && (
         <CreateIdeaModal
           branches={tree?.branches ?? []}
+          defaultBranchId={createBranchId}
           onClose={() => setShowCreate(false)}
           onSubmit={handleCreateIdea}
         />
