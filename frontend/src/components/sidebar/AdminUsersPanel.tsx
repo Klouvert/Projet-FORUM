@@ -11,20 +11,21 @@ interface UserSummary {
 }
 
 const AdminUsersPanel = () => {
-  const { user: me } = useAuth();
+  const { user: me, logout } = useAuth();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
-    setError(false);
+    setErrorStatus(null);
     try {
       const r = await api.get<UserSummary[]>('/admin/users');
       setUsers(r.data);
-    } catch {
-      setError(true);
+    } catch (err: unknown) {
+      const status = (err as { response?: { status: number } })?.response?.status ?? 0;
+      setErrorStatus(status);
     } finally {
       setLoading(false);
     }
@@ -49,12 +50,34 @@ const AdminUsersPanel = () => {
   };
 
   if (loading) return <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '16px' }}>Chargement…</p>;
-  if (error) return (
-    <div style={{ textAlign: 'center', marginTop: '16px' }}>
-      <p style={{ color: '#e57373', fontSize: '13px', marginBottom: '8px' }}>Erreur de chargement</p>
-      <button onClick={load} style={refreshBtnStyle}><RefreshCw size={13} /> Réessayer</button>
-    </div>
-  );
+
+  if (errorStatus !== null) {
+    const is403 = errorStatus === 403;
+    return (
+      <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(229,57,53,0.06)', border: '1px solid rgba(229,57,53,0.25)', borderRadius: '8px' }}>
+        <p style={{ color: '#e57373', fontSize: '13px', marginBottom: '6px', fontWeight: 500 }}>
+          Erreur {errorStatus || 'réseau'}
+        </p>
+        {is403 ? (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5, marginBottom: '10px' }}>
+              Votre session ne contient pas le rôle Admin. Déconnectez-vous puis reconnectez-vous pour actualiser votre token.
+            </p>
+            <button onClick={logout} style={{ ...refreshBtnStyle, color: '#e57373', border: '1px solid rgba(229,57,53,0.4)', borderRadius: '6px', padding: '5px 10px' }}>
+              Se déconnecter
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '10px' }}>
+              {errorStatus === 404 ? 'Endpoint introuvable — le déploiement est peut-être en cours.' : 'Une erreur serveur est survenue.'}
+            </p>
+            <button onClick={load} style={refreshBtnStyle}><RefreshCw size={13} /> Réessayer</button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
