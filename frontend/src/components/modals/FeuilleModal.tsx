@@ -144,7 +144,6 @@ const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'spa
 const badgeStyle: React.CSSProperties = { padding: '3px 10px', borderRadius: '12px', fontSize: '11px', color: '#fff' };
 const deleteBtnStyle: React.CSSProperties = { width: '28px', height: '28px', background: 'rgba(229,57,53,0.15)', border: '1px solid #e53935', borderRadius: '6px', color: '#e57373', fontSize: '14px', cursor: 'pointer', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
 const closeBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#888', fontSize: '18px', cursor: 'pointer' };
-const iconBtnStyle: React.CSSProperties = { background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' };
 const editBtnStyle: React.CSSProperties = { width: '28px', height: '28px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
 const editInputStyle: React.CSSProperties = { width: '100%', padding: '8px 10px', background: '#1a1a2e', border: '1px solid #0f3460', borderRadius: '6px', color: '#e0e0e0', fontSize: '14px', boxSizing: 'border-box' };
 const saveBtnStyle: React.CSSProperties = { padding: '5px 14px', background: '#0f3460', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' };
