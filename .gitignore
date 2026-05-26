@@ -5,6 +5,7 @@ obj/
 *.db-wal
 node_modules/
 dist/
+ArbreIntelligence/wwwroot/
 .DS_Store
 *.user
 appsettings.Production.json

@@ -84,9 +84,14 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+app.MapFallbackToFile("index.html");
 
 app.Run();
