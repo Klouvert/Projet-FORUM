@@ -3,6 +3,7 @@ import { LogOut, GitBranch, Search, Leaf, Shield, Pencil, Trash2 } from 'lucide-
 import type { Branch, IdeaNode, TrunkValue } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import SearchPanel from './SearchPanel';
+import AdminUsersPanel from './AdminUsersPanel';
 
 interface SidebarProps {
   branches: Branch[];
@@ -271,6 +272,12 @@ const Sidebar = ({
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune valeur fondatrice</p>
               )}
             </ul>
+
+            {isAdmin && (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', marginTop: '4px' }}>
+                <AdminUsersPanel />
+              </div>
+            )}
 
             {isAdmin && (
               showValueForm ? (
