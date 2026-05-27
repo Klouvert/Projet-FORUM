@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, GitBranch, Search, Leaf, Shield, Pencil, Trash2, Settings, Users, X } from 'lucide-react';
+import { LogOut, GitBranch, Search, Leaf, Shield, Pencil, Trash2, Settings, Users, X, Plus } from 'lucide-react';
 import type { Branch, IdeaNode, TrunkValue } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import SearchPanel from './SearchPanel';
@@ -10,7 +10,7 @@ interface SidebarProps {
   ideas: IdeaNode[];
   trunkValues: TrunkValue[];
   onSelectIdea: (idea: IdeaNode) => void;
-  onCreateBranch: (name: string, description?: string) => Promise<void>;
+  onCreateBranch: (name: string, description?: string, parentBranchId?: string) => Promise<void>;
   onUpdateBranch: (id: string, name: string, description?: string) => Promise<void>;
   onDeleteBranch: (id: string) => Promise<void>;
   onCreateTrunkValue: (name: string, description: string) => Promise<void>;
@@ -25,6 +25,7 @@ const SETTINGS_NAV: { id: SettingsSection; Icon: React.FC<{ size: number }>; lab
   { id: 'users', Icon: Users, label: 'Utilisateurs' },
 ];
 
+
 const Sidebar = ({
   branches, ideas, trunkValues, onSelectIdea,
   onCreateBranch, onUpdateBranch, onDeleteBranch,
@@ -36,17 +37,24 @@ const Sidebar = ({
   const { user, logout } = useAuth();
   const isAdmin = user?.isAdmin ?? false;
 
-  /* ── Branch form ────────────────────────────────────────────── */
+  /* ── Root branch form ───────────────────────────────────────── */
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [branchName, setBranchName] = useState('');
   const [branchDesc, setBranchDesc] = useState('');
   const [branchSaving, setBranchSaving] = useState(false);
+
+  /* ── Sub-branch form ────────────────────────────────────────── */
+  const [subBranchParentId, setSubBranchParentId] = useState<string | null>(null);
+  const [subBranchName, setSubBranchName] = useState('');
+  const [subBranchDesc, setSubBranchDesc] = useState('');
+  const [subBranchSaving, setSubBranchSaving] = useState(false);
 
   /* ── Branch edit ────────────────────────────────────────────── */
   const [editBranchId, setEditBranchId] = useState<string | null>(null);
   const [editBranchName, setEditBranchName] = useState('');
   const [editBranchDesc, setEditBranchDesc] = useState('');
   const [editBranchSaving, setEditBranchSaving] = useState(false);
+  const [deleteBranchError, setDeleteBranchError] = useState<string | null>(null);
 
   /* ── Trunk value form ───────────────────────────────────────── */
   const [showValueForm, setShowValueForm] = useState(false);
@@ -60,7 +68,9 @@ const Sidebar = ({
   const [editValueDesc, setEditValueDesc] = useState('');
   const [editValueSaving, setEditValueSaving] = useState(false);
 
-  const handleCreateBranch = async () => {
+  /* ── Handlers ───────────────────────────────────────────────── */
+
+  const handleCreateRootBranch = async () => {
     if (!branchName.trim()) return;
     setBranchSaving(true);
     try {
@@ -69,10 +79,20 @@ const Sidebar = ({
     } finally { setBranchSaving(false); }
   };
 
+  const handleCreateSubBranch = async () => {
+    if (!subBranchName.trim() || !subBranchParentId) return;
+    setSubBranchSaving(true);
+    try {
+      await onCreateBranch(subBranchName.trim(), subBranchDesc.trim() || undefined, subBranchParentId);
+      setSubBranchName(''); setSubBranchDesc(''); setSubBranchParentId(null);
+    } finally { setSubBranchSaving(false); }
+  };
+
   const startEditBranch = (b: Branch) => {
     setEditBranchId(b.id);
     setEditBranchName(b.name);
     setEditBranchDesc(b.description ?? '');
+    setDeleteBranchError(null);
   };
 
   const handleUpdateBranch = async () => {
@@ -82,6 +102,20 @@ const Sidebar = ({
       await onUpdateBranch(editBranchId, editBranchName.trim(), editBranchDesc.trim() || undefined);
       setEditBranchId(null);
     } finally { setEditBranchSaving(false); }
+  };
+
+  const handleDeleteBranch = async (id: string) => {
+    setDeleteBranchError(null);
+    try {
+      await onDeleteBranch(id);
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { error?: string } } };
+      if (e?.response?.status === 409) {
+        setDeleteBranchError(e.response.data?.error ?? 'Supprimez d\'abord les sous-branches.');
+      } else {
+        setDeleteBranchError('Erreur lors de la suppression.');
+      }
+    }
   };
 
   const handleCreateValue = async () => {
@@ -106,6 +140,112 @@ const Sidebar = ({
       await onUpdateTrunkValue(editValueId, editValueName.trim(), editValueDesc.trim());
       setEditValueId(null);
     } finally { setEditValueSaving(false); }
+  };
+
+  /* ── Recursive branch renderer ──────────────────────────────── */
+
+  const renderBranchTree = (parentId: string | null, depth: number): React.ReactNode => {
+    const items = branches.filter(b => b.parentBranchId === parentId);
+    if (items.length === 0 && parentId !== null) return null;
+
+    return items.map((branch) => {
+      const children = branches.filter(b => b.parentBranchId === branch.id);
+      const hasChildren = children.length > 0;
+      const canAddSub = isAdmin && depth < 2; // depth 0 = root, 1 = child, 2 = grandchild → max 3 levels
+
+      return (
+        <li key={branch.id} style={{ marginBottom: '4px' }}>
+          {editBranchId === branch.id ? (
+            <div style={{ ...formBoxStyle, marginLeft: depth * 16 }}>
+              <input type="text" value={editBranchName}
+                onChange={(e) => setEditBranchName(e.target.value)} style={inputStyle} autoFocus />
+              <input type="text" value={editBranchDesc} placeholder="Description (optionnelle)"
+                onChange={(e) => setEditBranchDesc(e.target.value)} style={inputStyle} />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={handleUpdateBranch} disabled={editBranchSaving || !editBranchName.trim()}
+                  style={{ ...actionBtnStyle, background: 'var(--accent)', flex: 1 }}>
+                  {editBranchSaving ? '...' : 'Enregistrer'}
+                </button>
+                <button onClick={() => setEditBranchId(null)}
+                  style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginLeft: depth * 16 }}>
+              <div style={{
+                padding: '8px 10px', background: 'var(--bg-card)', borderRadius: '8px',
+                fontSize: depth === 0 ? '14px' : '13px',
+                color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                border: '1px solid var(--border)',
+                borderLeft: depth > 0 ? '2px solid var(--accent)' : '1px solid var(--border)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                  {depth > 0 && (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '10px', flexShrink: 0 }}>└</span>
+                  )}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {branch.name}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--border)', padding: '1px 6px', borderRadius: '12px', whiteSpace: 'nowrap' }}>
+                    {branch.ideaCount}
+                    {hasChildren && ` +${children.reduce((acc, c) => acc + c.ideaCount, 0)}`}
+                  </span>
+                  {isAdmin && (
+                    <>
+                      {canAddSub && (
+                        <button
+                          onClick={() => { setSubBranchParentId(branch.id); setSubBranchName(''); setSubBranchDesc(''); }}
+                          title="Ajouter une sous-branche"
+                          style={addSubBtnStyle}
+                        >
+                          <Plus size={11} />
+                        </button>
+                      )}
+                      <button onClick={() => startEditBranch(branch)} title="Modifier" style={editBtnStyle}><Pencil size={13} /></button>
+                      <button onClick={() => handleDeleteBranch(branch.id)} title="Supprimer" style={deleteBtnStyle}><Trash2 size={14} /></button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Sub-branch creation form */}
+              {subBranchParentId === branch.id && (
+                <div style={{ ...formBoxStyle, marginTop: '4px', marginLeft: 16 }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                    Sous-branche de <strong>{branch.name}</strong>
+                  </div>
+                  <input type="text" placeholder="Nom de la sous-branche *" value={subBranchName}
+                    onChange={(e) => setSubBranchName(e.target.value)} style={inputStyle} autoFocus />
+                  <input type="text" placeholder="Description (optionnelle)" value={subBranchDesc}
+                    onChange={(e) => setSubBranchDesc(e.target.value)} style={inputStyle} />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={handleCreateSubBranch} disabled={subBranchSaving || !subBranchName.trim()}
+                      style={{ ...actionBtnStyle, background: 'var(--accent)', flex: 1 }}>
+                      {subBranchSaving ? '...' : 'Créer'}
+                    </button>
+                    <button onClick={() => setSubBranchParentId(null)}
+                      style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Recurse into children */}
+          {children.length > 0 && (
+            <ul style={{ listStyle: 'none', marginTop: '3px' }}>
+              {renderBranchTree(branch.id, depth + 1)}
+            </ul>
+          )}
+        </li>
+      );
+    });
   };
 
   return (
@@ -173,48 +313,23 @@ const Sidebar = ({
           {/* ── Branches ──────────────────────────────────────── */}
           {activeTab === 'branches' && (
             <>
+              {deleteBranchError && (
+                <div style={{
+                  marginBottom: '8px', padding: '8px 10px',
+                  background: 'rgba(229,57,53,0.1)', border: '1px solid #e53935',
+                  borderRadius: '6px', fontSize: '12px', color: '#e57373',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px',
+                }}>
+                  <span>{deleteBranchError}</span>
+                  <button onClick={() => setDeleteBranchError(null)}
+                    style={{ background: 'none', border: 'none', color: '#e57373', cursor: 'pointer', flexShrink: 0, padding: '0' }}>
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
               <ul style={{ listStyle: 'none', marginBottom: '10px' }}>
-                {branches.map((branch) => (
-                  <li key={branch.id} style={{ marginBottom: '6px' }}>
-                    {editBranchId === branch.id ? (
-                      <div style={formBoxStyle}>
-                        <input type="text" value={editBranchName}
-                          onChange={(e) => setEditBranchName(e.target.value)} style={inputStyle} autoFocus />
-                        <input type="text" value={editBranchDesc} placeholder="Description (optionnelle)"
-                          onChange={(e) => setEditBranchDesc(e.target.value)} style={inputStyle} />
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={handleUpdateBranch} disabled={editBranchSaving || !editBranchName.trim()}
-                            style={{ ...actionBtnStyle, background: 'var(--accent)', flex: 1 }}>
-                            {editBranchSaving ? '...' : 'Enregistrer'}
-                          </button>
-                          <button onClick={() => setEditBranchId(null)}
-                            style={{ ...actionBtnStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                            Annuler
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{
-                        padding: '10px 12px', background: 'var(--bg-card)', borderRadius: '8px',
-                        fontSize: '14px', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        border: '1px solid var(--border)',
-                      }}>
-                        <span>{branch.name}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--border)', padding: '2px 8px', borderRadius: '12px' }}>
-                            {branch.ideaCount} idées
-                          </span>
-                          {isAdmin && (
-                            <>
-                              <button onClick={() => startEditBranch(branch)} title="Modifier" style={editBtnStyle}><Pencil size={13} /></button>
-                              <button onClick={() => onDeleteBranch(branch.id)} title="Supprimer" style={deleteBtnStyle}><Trash2 size={14} /></button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                ))}
+                {renderBranchTree(null, 0)}
                 {branches.length === 0 && (
                   <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', marginTop: '24px' }}>Aucune branche</p>
                 )}
@@ -228,7 +343,7 @@ const Sidebar = ({
                     <input type="text" placeholder="Description (optionnelle)" value={branchDesc}
                       onChange={(e) => setBranchDesc(e.target.value)} style={inputStyle} />
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={handleCreateBranch} disabled={branchSaving || !branchName.trim()}
+                      <button onClick={handleCreateRootBranch} disabled={branchSaving || !branchName.trim()}
                         style={{ ...actionBtnStyle, background: 'var(--accent)', flex: 1 }}>
                         {branchSaving ? '...' : 'Créer'}
                       </button>
@@ -239,7 +354,7 @@ const Sidebar = ({
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => setShowBranchForm(true)} style={dashedBtnStyle}>+ Nouvelle branche</button>
+                  <button onClick={() => setShowBranchForm(true)} style={dashedBtnStyle}>+ Nouvelle branche racine</button>
                 )
               )}
             </>
@@ -381,6 +496,7 @@ const Sidebar = ({
   );
 };
 
+
 const inputStyle: React.CSSProperties = {
   padding: '8px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)',
   borderRadius: '6px', color: 'var(--text-primary)', fontSize: '13px', width: '100%', boxSizing: 'border-box',
@@ -407,6 +523,11 @@ const editBtnStyle: React.CSSProperties = {
 const deleteBtnStyle: React.CSSProperties = {
   width: '28px', height: '28px', background: 'rgba(229,57,53,0.12)', border: '1px solid #e53935', borderRadius: '6px',
   color: '#e57373', cursor: 'pointer', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+};
+const addSubBtnStyle: React.CSSProperties = {
+  width: '22px', height: '22px', background: 'rgba(var(--accent-rgb, 126,87,194),0.12)', border: '1px solid var(--accent)',
+  borderRadius: '5px', color: 'var(--accent)', cursor: 'pointer', padding: '0',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 };
 
 export default Sidebar;
