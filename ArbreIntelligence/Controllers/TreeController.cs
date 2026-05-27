@@ -24,7 +24,7 @@ public class TreeController(AppDbContext db) : ControllerBase
             .Include(b => b.Ideas)
             .Select(b => new BranchDto(
                 b.Id, b.Name, b.Description,
-                b.Ideas.Count, b.CreatedAt))
+                b.Ideas.Count, b.CreatedAt, b.ParentBranchId))
             .ToListAsync();
 
         var ideas = await db.Ideas
