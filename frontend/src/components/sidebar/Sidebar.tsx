@@ -361,7 +361,7 @@ const Sidebar = ({
           )}
 
           {/* ── Recherche ─────────────────────────────────────── */}
-          {activeTab === 'recherche' && <SearchPanel ideas={ideas} onSelectIdea={onSelectIdea} />}
+          {activeTab === 'recherche' && <SearchPanel ideas={ideas} branches={branches} onSelectIdea={onSelectIdea} />}
 
           {/* ── Racines ───────────────────────────────────────── */}
           {activeTab === 'racines' && (
