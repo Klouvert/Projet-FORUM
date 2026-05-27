@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import api from '../../api/axios';
-import type { Tree, IdeaNode, IdeaDetail } from '../../types';
+import type { Tree, IdeaNode, IdeaDetail, Branch } from '../../types';
 import { LEVEL_TO_STAGE } from '../../types';
 import BourGeonModal from '../modals/BourGeonModal';
 import FleurModal from '../modals/FleurModal';
@@ -198,6 +198,7 @@ const TreeCanvas = ({
 
   useEffect(() => {
     if (!tree || !svgRef.current) return;
+    const t = tree; // alias pour les closures imbriquées (TypeScript narrowing)
 
     const width  = svgRef.current.clientWidth;
     const height = svgRef.current.clientHeight;
@@ -250,7 +251,7 @@ const TreeCanvas = ({
       .attr('fill', '#3b2510').attr('opacity', 0.75);
 
     /* ── Racines dans le sol ─────────────────────────────────── */
-    const seeds = tree.trunkValues;
+    const seeds = t.trunkValues;
     const rootDepth = 62;
     seeds.forEach((value, i) => {
       const spacing = Math.min(seeds.length * 48, 220) / Math.max(seeds.length - 1, 1);
@@ -277,9 +278,9 @@ const TreeCanvas = ({
     /* bouton + graine */
     appendAddButton(g, cx + 100, cy + 16, () => onRequestCreate(undefined));
 
-    /* ── Layout : tronc grandit pour éviter les chevauchements ─ */
-    const branchCount = tree.branches.length;
-    const totalLevels = Math.ceil(branchCount / 2);
+    /* ── Layout : tronc grandit selon les branches racines ───── */
+    const rootBranches = t.branches.filter(b => b.parentBranchId === null);
+    const totalLevels  = Math.ceil(rootBranches.length / 2);
     /* 80 px minimum entre niveaux de branches (zone = 70 % du tronc) */
     const trunkH = Math.max(TRUNK_H_MIN, Math.round(Math.max(0, totalLevels - 1) * 80 / 0.70));
 
@@ -288,77 +289,97 @@ const TreeCanvas = ({
       .attr('fill', 'url(#trunk-grad)')
       .attr('filter', 'drop-shadow(0 4px 10px rgba(0,0,0,0.28))');
 
-    /* ── Branches alternées ──────────────────────────────────── */
+    /* ── Rendu récursif d'une branche et de ses sous-branches ── */
+    function renderBranchAt(
+      branch: Branch,
+      attachX: number,
+      attachY: number,
+      angleDeg: number,   // angle depuis la verticale (+ = droite, - = gauche)
+      depth: number,      // 0 = racine, 1 = enfant, 2 = petit-enfant
+      animDelay: number,  // index pour l'animation d'entrée
+      colorFrac: number,  // 0-1 pour interpolation de couleur
+    ): void {
+      const angleRad = angleDeg * (Math.PI / 180);
+      const unitX    = Math.sin(angleRad);
+      const unitY    = -Math.cos(angleRad);
+      const side     = angleDeg >= 0 ? 1 : -1;
 
-    tree.branches.forEach((branch, i) => {
-      const side = i % 2 === 0 ? 1 : -1;
-      const levelIndex = Math.floor(i / 2);
-      const levelFrac  = totalLevels > 1 ? levelIndex / (totalLevels - 1) : 0.5;
-
-      /* point d'attache sur le tronc */
-      const attachY = cy - trunkH * (0.20 + levelFrac * 0.70);
-      const attachX = cx + side * 10;
-
-      /* angle : bas = 58°, haut = 26° */
-      const angleDeg   = 58 - levelFrac * 32;
-      const angle      = side * angleDeg * (Math.PI / 180);
-      const unitX      = Math.sin(angle);
-      const unitY      = -Math.cos(angle);
-
-      /* longueur = dernier nœud + même queue que tête (FIRST_NODE_DIST) */
-      const ideaCount    = tree.ideas.filter(id => id.branchId === branch.id).length;
-      const branchLength = Math.max(80, FIRST_NODE_DIST + Math.max(0, ideaCount - 1) * NODE_SPACING + TIP_EXTRA);
-
-      const bx = attachX + unitX * branchLength;
-      const by = attachY + unitY * branchLength;
-
-      const sw = Math.max(2.5, Math.min(ideaCount * 1.2 + 3, 14));
-      const branchColor = d3.interpolateRgb('#8b6340', '#7aaa50')(levelFrac);
-
-      /* branche bézier */
-      const pathEl = g.append('path')
-        .attr('d', bezierBranch(attachX, attachY, bx, by))
-        .attr('stroke', branchColor).attr('stroke-width', sw)
-        .attr('stroke-linecap', 'round').attr('fill', 'none');
-      const totalLen = (pathEl.node() as SVGPathElement).getTotalLength();
-      pathEl.attr('stroke-dasharray', totalLen).attr('stroke-dashoffset', totalLen)
-        .transition().duration(600).delay(i * 80).ease(d3.easeCubicOut)
-        .attr('stroke-dashoffset', 0);
-
-      /* nom de branche : au plus proche du tronc */
-      const labelAnchor = side > 0 ? 'start' : 'end';
-      const labelX = cx + side * 42;
-      const labelY = attachY - 5;
-      g.append('text').attr('x', labelX).attr('y', labelY)
-        .attr('text-anchor', labelAnchor)
-        .attr('fill', '#5a4030').attr('font-size', '11px').attr('font-weight', '500')
-        .attr('letter-spacing', '0.3px')
-        .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
-        .text(branch.name);
-
-      /* bouton + à l'extrémité */
-      appendAddButton(g, bx + unitX * 18, by + unitY * 18, () => onRequestCreate(branch.id));
-
-      /* ── Nœuds : triés par avancement (Feuille→Bourgeon), collés sur la branche ── */
-      const branchIdeas = tree.ideas
+      /* Nœuds triés par avancement */
+      const branchIdeas = t.ideas
         .filter(idea => idea.branchId === branch.id)
         .sort((a, b) => {
           const sa = LEVEL_TO_STAGE[a.level] ?? 'bud';
           const sb = LEVEL_TO_STAGE[b.level] ?? 'bud';
           return STAGE_ORDER[sa] - STAGE_ORDER[sb];
         });
+      const ideaCount = branchIdeas.length;
+
+      /* Les sous-branches sont plus courtes */
+      const lenMult    = [1, 0.72, 0.56][depth] ?? 0.56;
+      const nodeStep   = NODE_SPACING * lenMult;
+      const firstDist  = FIRST_NODE_DIST * lenMult;
+      const branchLength = Math.max(
+        60 * lenMult,
+        firstDist + Math.max(0, ideaCount - 1) * nodeStep + TIP_EXTRA * lenMult,
+      );
+
+      const bx = attachX + unitX * branchLength;
+      const by = attachY + unitY * branchLength;
+
+      /* Épaisseur */
+      const sw = depth === 0
+        ? Math.max(2.5, Math.min(ideaCount * 1.2 + 3, 14))
+        : Math.max(1.5, Math.min(ideaCount * 0.8 + 2.5, 9 - depth * 2));
+
+      /* Couleur */
+      const branchColor = depth === 0
+        ? d3.interpolateRgb('#8b6340', '#7aaa50')(colorFrac)
+        : depth === 1
+          ? d3.interpolateRgb('#7aaa50', '#5a9a40')(colorFrac)
+          : '#4a8830';
+
+      /* Courbe bézier */
+      const pathEl = g.append('path')
+        .attr('d', bezierBranch(attachX, attachY, bx, by))
+        .attr('stroke', branchColor).attr('stroke-width', sw)
+        .attr('stroke-linecap', 'round').attr('fill', 'none');
+      const totalLen = (pathEl.node() as SVGPathElement).getTotalLength();
+      pathEl.attr('stroke-dasharray', totalLen).attr('stroke-dashoffset', totalLen)
+        .transition().duration(600).delay(animDelay * 80).ease(d3.easeCubicOut)
+        .attr('stroke-dashoffset', 0);
+
+      /* Nom de la branche */
+      if (depth === 0) {
+        const labelAnchor = side > 0 ? 'start' : 'end';
+        const labelX = cx + side * 42;
+        const labelY = attachY - 5;
+        g.append('text').attr('x', labelX).attr('y', labelY)
+          .attr('text-anchor', labelAnchor)
+          .attr('fill', '#5a4030').attr('font-size', '11px').attr('font-weight', '500')
+          .attr('letter-spacing', '0.3px')
+          .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
+          .text(branch.name);
+      } else {
+        /* Sous-branche : étiquette près du point d'attache */
+        const labelAnchor = side > 0 ? 'start' : 'end';
+        const labelX = attachX + side * 14;
+        const labelY = attachY - 4;
+        g.append('text').attr('x', labelX).attr('y', labelY)
+          .attr('text-anchor', labelAnchor)
+          .attr('fill', '#4a5530').attr('font-size', '9px').attr('font-weight', '500')
+          .attr('stroke', 'rgba(255,252,245,0.85)').attr('stroke-width', '2.5').attr('paint-order', 'stroke fill')
+          .text(branch.name);
+      }
 
       const pathNode = pathEl.node() as SVGPathElement;
 
+      /* ── Nœuds ────────────────────────────────────────────── */
       branchIdeas.forEach((idea: IdeaNode, j: number) => {
-        const dist = FIRST_NODE_DIST + j * NODE_SPACING;
+        const dist = firstDist + j * nodeStep;
         const alt  = j % 2 === 0 ? -1 : 1;
-
-        /* nœud collé sur la courbe bézier réelle */
-        const t  = dist / branchLength;
-        const pt = pathNode.getPointAtLength(t * totalLen);
-        const nx = pt.x;
-        const ny = pt.y;
+        const t    = Math.min(dist / branchLength, 0.98);
+        const pt   = pathNode.getPointAtLength(t * totalLen);
+        const nx = pt.x, ny = pt.y;
 
         const stage      = (LEVEL_TO_STAGE[idea.level] ?? 'bud') as NodeStage;
         const baseColor  = DOMAIN_COLORS[idea.domain] ?? STAGE_COLORS[stage];
@@ -373,14 +394,13 @@ const TreeCanvas = ({
 
         appendNodeShape(nodeG as never, stage, radius, baseColor, isSelected);
 
-        /* Perpendiculaire locale à la tangente bézier — le label ne croise pas la branche */
-        const eps  = 1;
-        const ptA  = pathNode.getPointAtLength(Math.max(0,          t * totalLen - eps));
-        const ptB  = pathNode.getPointAtLength(Math.min(totalLen,   t * totalLen + eps));
-        const tanX = ptB.x - ptA.x, tanY = ptB.y - ptA.y;
+        const eps    = 1;
+        const ptA    = pathNode.getPointAtLength(Math.max(0,        t * totalLen - eps));
+        const ptB    = pathNode.getPointAtLength(Math.min(totalLen, t * totalLen + eps));
+        const tanX   = ptB.x - ptA.x, tanY = ptB.y - ptA.y;
         const tanLen = Math.sqrt(tanX * tanX + tanY * tanY) || 1;
-        const lpX  = -tanY / tanLen;   /* perpendiculaire locale */
-        const lpY  =  tanX / tanLen;
+        const lpX    = -tanY / tanLen;
+        const lpY    =  tanX / tanLen;
 
         const labelGap   = radius + 6;
         const lx         = alt * lpX * labelGap;
@@ -391,15 +411,13 @@ const TreeCanvas = ({
         const yBase = ly + (alt < 0 ? -(line2 ? lineH : 2) : 2);
 
         nodeG.append('text')
-          .attr('x', lx).attr('y', yBase)
-          .attr('text-anchor', textAnchor)
+          .attr('x', lx).attr('y', yBase).attr('text-anchor', textAnchor)
           .attr('fill', '#5a4030').attr('font-size', '8px')
           .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
           .text(line1);
         if (line2) {
           nodeG.append('text')
-            .attr('x', lx).attr('y', yBase + lineH)
-            .attr('text-anchor', textAnchor)
+            .attr('x', lx).attr('y', yBase + lineH).attr('text-anchor', textAnchor)
             .attr('fill', '#5a4030').attr('font-size', '8px')
             .attr('stroke', 'rgba(255,252,245,0.9)').attr('stroke-width', '3').attr('paint-order', 'stroke fill')
             .text(line2);
@@ -410,18 +428,48 @@ const TreeCanvas = ({
 
         nodeG
           .on('mouseenter', function () {
-            d3.select(this).transition().duration(150)
-              .attr('transform', `translate(${nx},${ny}) scale(1.5)`);
+            d3.select(this).transition().duration(150).attr('transform', `translate(${nx},${ny}) scale(1.5)`);
           })
           .on('mouseleave', function () {
-            d3.select(this).transition().duration(150)
-              .attr('transform', `translate(${nx},${ny}) scale(1)`);
+            d3.select(this).transition().duration(150).attr('transform', `translate(${nx},${ny}) scale(1)`);
           });
       });
+
+      /* ── Bouton + idée à l'extrémité ─────────────────────── */
+      appendAddButton(g, bx + unitX * 18, by + unitY * 18, () => onRequestCreate(branch.id));
+
+      /* ── Sous-branches récursives ─────────────────────────── */
+      const children = t.branches.filter(b => b.parentBranchId === branch.id);
+      if (children.length > 0) {
+        const spread = children.length === 1 ? 0 : 22;
+        children.forEach((child, ci) => {
+          const childOffset = (ci - (children.length - 1) / 2) * spread;
+          renderBranchAt(
+            child, bx, by,
+            angleDeg + childOffset,
+            depth + 1,
+            animDelay + ci + 1,
+            colorFrac,
+          );
+        });
+      }
+    }
+
+    /* ── Branches racines alternées sur le tronc ─────────────── */
+    rootBranches.forEach((branch, i) => {
+      const side       = i % 2 === 0 ? 1 : -1;
+      const levelIndex = Math.floor(i / 2);
+      const levelFrac  = totalLevels > 1 ? levelIndex / (totalLevels - 1) : 0.5;
+
+      const attachY  = cy - trunkH * (0.20 + levelFrac * 0.70);
+      const attachX  = cx + side * 10;
+      const angleDeg = side * (58 - levelFrac * 32);
+
+      renderBranchAt(branch, attachX, attachY, angleDeg, 0, i, levelFrac);
     });
 
     /* ── Idées sans branche (au-dessus du tronc) ─────────────── */
-    const rootIdeas = tree.ideas.filter(idea => idea.branchId === null);
+    const rootIdeas = t.ideas.filter(idea => idea.branchId === null);
     const trunkTopY = cy - trunkH;
     rootIdeas.forEach((idea, j) => {
       const nx = cx + (j - (rootIdeas.length - 1) / 2) * 52;
