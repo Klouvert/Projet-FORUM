@@ -58,6 +58,7 @@ export interface Branch {
   description: string | null;
   ideaCount: number;
   createdAt: string;
+  parentBranchId: string | null;
 }
 
 export interface TrunkValue {

@@ -55,8 +55,8 @@ export const useTree = () => {
     refreshTree();
   };
 
-  const createBranch = async (name: string, description?: string) => {
-    await api.post('/branches', { name, description: description ?? null });
+  const createBranch = async (name: string, description?: string, parentBranchId?: string) => {
+    await api.post('/branches', { name, description: description ?? null, parentBranchId: parentBranchId ?? null });
     refreshTree();
   };
 
