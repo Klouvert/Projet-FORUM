@@ -435,15 +435,18 @@ const TreeCanvas = ({
           });
       });
 
-      /* ── Bouton + idée à l'extrémité ─────────────────────── */
-      appendAddButton(g, bx + unitX * 18, by + unitY * 18, () => onRequestCreate(branch.id));
-
       /* ── Sous-branches récursives ─────────────────────────── */
       const children = t.branches.filter(b => b.parentBranchId === branch.id);
+
       if (children.length > 0) {
-        const spread = children.length === 1 ? 0 : 22;
+        /* Éventail plus large pour éviter la superposition.
+           Enfant unique : déviation latérale de 22° vers l'extérieur.
+           Plusieurs enfants : 42° entre chaque frère. */
+        const spread = 42;
         children.forEach((child, ci) => {
-          const childOffset = (ci - (children.length - 1) / 2) * spread;
+          const childOffset = children.length === 1
+            ? side * 22                                             // seul enfant → déviation côté extérieur
+            : (ci - (children.length - 1) / 2) * spread;          // plusieurs → éventail centré
           renderBranchAt(
             child, bx, by,
             angleDeg + childOffset,
@@ -452,6 +455,19 @@ const TreeCanvas = ({
             colorFrac,
           );
         });
+
+        /* Bouton + idée décalé perpendiculairement (évite le chevauchement avec les sous-branches) */
+        const perpX = -unitY;  // perpendiculaire à la direction de la branche
+        const perpY =  unitX;
+        appendAddButton(
+          g,
+          bx + perpX * side * 22,
+          by + perpY * side * 22,
+          () => onRequestCreate(branch.id),
+        );
+      } else {
+        /* Pas de sous-branche : bouton + dans le prolongement classique */
+        appendAddButton(g, bx + unitX * 18, by + unitY * 18, () => onRequestCreate(branch.id));
       }
     }
 
