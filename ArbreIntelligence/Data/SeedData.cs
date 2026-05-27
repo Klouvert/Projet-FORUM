@@ -16,6 +16,29 @@ public static class SeedData
         if (!await roleManager.RoleExistsAsync("Admin"))
             await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
 
+        /* ── Admin de test (idempotent) ──────────────────────────── */
+        // Compte placeholder — ne nécessite pas d'adresse e-mail réelle.
+        // Identifiants : admin@local / admin123
+        const string testEmail = "admin@local";
+        var testAdmin = await userManager.FindByEmailAsync(testEmail);
+        if (testAdmin is null)
+        {
+            testAdmin = new ApplicationUser
+            {
+                UserName       = "admin",
+                Email          = testEmail,
+                DisplayName    = "Admin (test)",
+                EmailConfirmed = true,
+                CreatedAt      = DateTime.UtcNow,
+            };
+            await userManager.CreateAsync(testAdmin, "admin123");
+            await userManager.AddToRoleAsync(testAdmin, "Admin");
+        }
+        else if (!await userManager.IsInRoleAsync(testAdmin, "Admin"))
+        {
+            await userManager.AddToRoleAsync(testAdmin, "Admin");
+        }
+
         /* ── Données initiales ───────────────────────────────────── */
         if (db.TrunkValues.Any())
         {
